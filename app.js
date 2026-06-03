@@ -174,7 +174,22 @@ function renderDashboard() {
   const date  = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const recentSignals = [...signals]
-    .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))
+    .sort((a, b) => {
+      const scoreA = a.relevance_score ? Number(a.relevance_score) : 0;
+      const scoreB = b.relevance_score ? Number(b.relevance_score) : 0;
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA;
+      }
+      const getUrgencyWeight = (urgency) => {
+        if (!urgency) return 0;
+        const u = String(urgency).toLowerCase();
+        if (u === 'high') return 3;
+        if (u === 'medium' || u === 'med') return 2;
+        if (u === 'low') return 1;
+        return 0;
+      };
+      return getUrgencyWeight(b.urgency) - getUrgencyWeight(a.urgency);
+    })
     .slice(0, 4);
 
   const highPct   = total ? Math.round((high / total) * 100)   : 0;

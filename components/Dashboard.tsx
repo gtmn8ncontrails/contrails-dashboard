@@ -65,12 +65,28 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   const renderTable = (data: any[]) => {
     if (!data || data.length === 0) return <div className="text-c-muted p-4">No data available.</div>;
     
-    // Sort data descending by relevance_score if it exists
+    // Sort data descending by relevance_score, and then by urgency (High > Medium > Low)
     const sortedData = [...data].sort((a, b) => {
-      if (a.relevance_score && b.relevance_score) {
-        return Number(b.relevance_score) - Number(a.relevance_score);
+      const scoreA = a.relevance_score ? Number(a.relevance_score) : 0;
+      const scoreB = b.relevance_score ? Number(b.relevance_score) : 0;
+      
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA;
       }
-      return 0;
+      
+      const getUrgencyWeight = (urgency: string) => {
+        if (!urgency) return 0;
+        const u = String(urgency).toLowerCase();
+        if (u === 'high') return 3;
+        if (u === 'medium' || u === 'med') return 2;
+        if (u === 'low') return 1;
+        return 0;
+      };
+      
+      const urgencyA = getUrgencyWeight(a.urgency);
+      const urgencyB = getUrgencyWeight(b.urgency);
+      
+      return urgencyB - urgencyA;
     });
 
     const headers = Object.keys(sortedData[0] || {});
