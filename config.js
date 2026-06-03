@@ -26,7 +26,7 @@ const CONFIG = {
   },
 
   // Auto-refresh every N minutes (set to 0 to disable)
-  REFRESH_INTERVAL_MINUTES: 5,
+  REFRESH_INTERVAL_MINUTES: 1,
 
 
   // ── N8N WORKFLOW WEBHOOKS ────────────────────────────────────────────
