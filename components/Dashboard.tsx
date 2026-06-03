@@ -110,9 +110,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
       {/* Sidebar (Desktop) / Top bar (Mobile) */}
       <aside className="glass m-2 md:m-4 md:mr-0 md:w-64 p-4 flex flex-col shrink-0 z-10">
         <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="w-8 h-8 rounded-lg bg-c-cyan flex items-center justify-center shadow-cyan">
-            <Activity className="w-5 h-5 text-black" />
-          </div>
+          <img src="/logo.png" alt="Contrails AI" className="w-8 h-8 rounded-lg object-contain shadow-cyan" />
           <h1 className="font-bold text-lg tracking-tight">Contrails <span className="text-c-cyan">AI</span></h1>
         </div>
 
