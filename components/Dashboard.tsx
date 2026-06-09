@@ -1,26 +1,92 @@
 'use client';
 
-import { useState } from 'react';
-import { Activity, Database, AlertCircle, CheckCircle, XCircle, Play, ChevronRight, LayoutDashboard } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, Database, AlertCircle, CheckCircle, XCircle, Play, ChevronRight, LayoutDashboard, Copy, Check, X } from 'lucide-react';
 import clsx from 'clsx';
 
 type TabType = 'overview' | 'stage1' | 'errors' | 'gtmSignals' | 'approvedBriefs' | 'stage3' | 'failedQa' | 'rejected';
 
+// ── TEXT MODAL ────────────────────────────────────────────────
+const TextModal = ({ text, onClose }: { text: string; onClose: () => void }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(7,7,17,0.85)', backdropFilter: 'blur(6px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="text-modal-box"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="text-modal-header">
+          <button
+            onClick={handleCopy}
+            className={clsx('text-modal-copy-btn', copied && 'copied')}
+          >
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+          <button onClick={onClose} className="text-modal-close-btn">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="text-modal-body">
+          {text}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── EXPANDABLE TEXT (now opens modal) ────────────────────────
 const ExpandableText = ({ text, maxLength = 80 }: { text: string, maxLength?: number }) => {
-  const [expanded, setExpanded] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   if (!text || typeof text !== 'string' || text.length <= maxLength) {
     return <div className="max-w-md">{text}</div>;
   }
   return (
-    <div className="max-w-md whitespace-normal leading-relaxed">
-      {expanded ? text : `${text.slice(0, maxLength)}...`}
-      <button 
-        onClick={() => setExpanded(!expanded)} 
-        className="ml-2 text-c-cyan text-xs font-semibold hover:underline"
-      >
-        {expanded ? 'Show less' : 'Read more'}
-      </button>
-    </div>
+    <>
+      <div className="max-w-md whitespace-normal leading-relaxed">
+        {`${text.slice(0, maxLength)}...`}
+        <button
+          onClick={() => setModalOpen(true)}
+          className="ml-2 text-c-cyan text-xs font-semibold hover:underline"
+        >
+          Read more
+        </button>
+      </div>
+      {modalOpen && <TextModal text={text} onClose={() => setModalOpen(false)} />}
+    </>
   );
 };
 
