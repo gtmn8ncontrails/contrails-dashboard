@@ -328,3 +328,23 @@ body {
 .animate-drawer-slide-in {
   animation: drawer-slide-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Custom scrollbar for drawer body */
+.drawer-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+.drawer-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+.drawer-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.drawer-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.45);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}

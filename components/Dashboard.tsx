@@ -28,11 +28,19 @@ const TextDrawer = ({ text, onClose }: { text: string; onClose: () => void }) =>
     }
   };
 
-  // Close on Escape key
+  // Close on Escape key & Lock background scroll
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    
+    // Save original body overflow and set to hidden
+    const originalOverflow = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      window.removeEventListener('keydown', handler);
+      document.body.style.overflow = originalOverflow;
+    };
   }, [onClose]);
 
   return (
@@ -41,7 +49,7 @@ const TextDrawer = ({ text, onClose }: { text: string; onClose: () => void }) =>
       onClick={onClose}
     >
       <div
-        className="bg-[#0b0c16] border-l border-cyan-500/20 w-full max-w-md h-full flex flex-col shadow-2xl overflow-hidden animate-drawer-slide-in"
+        className="bg-[#0b0c16] border-l border-cyan-500/20 w-full max-w-md h-[100dvh] flex flex-col shadow-2xl overflow-hidden animate-drawer-slide-in"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -73,7 +81,7 @@ const TextDrawer = ({ text, onClose }: { text: string; onClose: () => void }) =>
         </div>
 
         {/* Scrollable body */}
-        <div className="p-6 overflow-y-auto text-sm leading-relaxed text-slate-300 whitespace-pre-wrap break-words select-text flex-1">
+        <div className="p-6 overflow-y-auto text-sm leading-relaxed text-slate-300 whitespace-pre-wrap break-words select-text flex-1 drawer-scrollbar">
           {text}
         </div>
       </div>
