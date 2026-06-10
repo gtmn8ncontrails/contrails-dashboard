@@ -121,10 +121,8 @@ export default function Dashboard({ initialData }: { initialData: any }) {
     { id: 'overview', label: 'Command Center', icon: LayoutDashboard },
     { id: 'stage1', label: 'Stage 1 Output', icon: Database },
     { id: 'errors', label: 'W1 Errors', icon: AlertCircle },
-    { id: 'gtmSignals', label: 'GTM Signals', icon: Activity },
     { id: 'approvedBriefs', label: 'Approved Briefs', icon: CheckCircle },
     { id: 'stage3', label: 'Stage 3 Queue', icon: Database },
-    { id: 'failedQa', label: 'Failed QA', icon: XCircle },
     { id: 'rejected', label: 'Rejected Signals', icon: XCircle },
   ];
 
