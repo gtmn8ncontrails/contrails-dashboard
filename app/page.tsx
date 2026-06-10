@@ -8,6 +8,7 @@ export default async function Home() {
   const [
     stage1Data,
     errorsData,
+    w2ErrorsData,
     gtmSignalsData,
     approvedBriefsData,
     stage3QueueData,
@@ -16,6 +17,7 @@ export default async function Home() {
   ] = await Promise.all([
     getSheetData('Stage 1 Output!A1:Z100'),
     getSheetData('w1 errors!A1:Z100'),
+    getSheetData('W2 Errors!A1:Z100'),
     getSheetData('GTM Signals!A1:Z100'),
     getSheetData('Approved Briefs!A1:Z100'),
     getSheetData('Stage 3 Queue!A1:Z100'),
@@ -28,6 +30,7 @@ export default async function Home() {
       initialData={{
         stage1: stage1Data,
         errors: errorsData,
+        w2Errors: w2ErrorsData,
         gtmSignals: gtmSignalsData,
         approvedBriefs: approvedBriefsData,
         stage3Queue: stage3QueueData,

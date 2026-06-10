@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Activity, Database, AlertCircle, CheckCircle, XCircle, Play, ChevronRight, LayoutDashboard, Copy, Check, X } from 'lucide-react';
 import clsx from 'clsx';
 
-type TabType = 'overview' | 'stage1' | 'errors' | 'gtmSignals' | 'approvedBriefs' | 'stage3' | 'failedQa' | 'rejected';
+type TabType = 'overview' | 'stage1' | 'errors' | 'w2Errors' | 'gtmSignals' | 'approvedBriefs' | 'stage3' | 'failedQa' | 'rejected';
 
 // ── TEXT MODAL ────────────────────────────────────────────────
 const TextModal = ({ text, onClose }: { text: string; onClose: () => void }) => {
@@ -121,6 +121,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
     { id: 'overview', label: 'Command Center', icon: LayoutDashboard },
     { id: 'stage1', label: 'Stage 1 Output', icon: Database },
     { id: 'errors', label: 'W1 Errors', icon: AlertCircle },
+    { id: 'w2Errors', label: 'W2 Errors', icon: AlertCircle },
     { id: 'approvedBriefs', label: 'Approved Briefs', icon: CheckCircle },
     { id: 'stage3', label: 'Stage 3 Queue', icon: Database },
     { id: 'rejected', label: 'Rejected Signals', icon: XCircle },
@@ -243,7 +244,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
                   { label: 'Total Signals', value: initialData.stage1?.length || 0, color: 'cyan' },
                   { label: 'Approved Briefs', value: initialData.approvedBriefs?.length || 0, color: 'purple' },
                   { label: 'Queue', value: initialData.stage3Queue?.length || 0, color: 'amber' },
-                  { label: 'Errors', value: initialData.errors?.length || 0, color: 'red' },
+                  { label: 'Errors', value: (initialData.errors?.length || 0) + (initialData.w2Errors?.length || 0), color: 'red' },
                 ].map((s, i) => (
                   <div key={i} className="glass-sm p-4 stat-card flex flex-col justify-between">
                     <span className="text-c-muted text-xs font-semibold uppercase tracking-wider">{s.label}</span>
@@ -295,11 +296,13 @@ export default function Dashboard({ initialData }: { initialData: any }) {
                {renderTable(
                  activeTab === 'stage1' ? initialData.stage1 :
                  activeTab === 'errors' ? initialData.errors :
+                 activeTab === 'w2Errors' ? initialData.w2Errors :
                  activeTab === 'gtmSignals' ? initialData.gtmSignals :
                  activeTab === 'approvedBriefs' ? initialData.approvedBriefs :
                  activeTab === 'stage3' ? initialData.stage3Queue :
                  activeTab === 'failedQa' ? initialData.failedQa :
-                 initialData.rejectedSignals
+                 activeTab === 'rejected' ? initialData.rejectedSignals :
+                 []
                )}
              </div>
           )}
