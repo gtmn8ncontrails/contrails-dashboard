@@ -182,12 +182,14 @@ export default function Dashboard({ initialData }: { initialData: any }) {
         <table className="data-table">
           <thead>
             <tr>
+              <th style={{ width: '2.5rem', minWidth: '2.5rem', textAlign: 'center' }}>#</th>
               {headers.map(h => <th key={h}>{h.replace(/_/g, ' ')}</th>)}
             </tr>
           </thead>
           <tbody>
             {sortedData.map((row, i) => (
               <tr key={i}>
+                <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: 'var(--c-muted)', fontWeight: 600, fontSize: '0.75rem' }}>{i + 1}</td>
                 {headers.map(h => (
                   <td key={h}>
                     {h === 'url' ? (
