@@ -2,6 +2,9 @@ import { google } from 'googleapis';
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '1vmLWIGBC2ywUQrm2x8WCEDCaep2Jd6v0rM-ysFXBiEw';
 
+// Separate spreadsheet for the "testing" workbook
+const TESTING_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_TESTING_SPREADSHEET_ID || '';
+
 async function getAuth() {
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
     console.warn('Google Service Account credentials missing.');
@@ -50,6 +53,61 @@ export async function getSheetData(range: string) {
     console.error('Error fetching sheet data via service account:', error);
     console.log('Attempting public CSV fetch fallback...');
     return await fetchPublicSheetData(range);
+  }
+}
+
+// ── Fetch from the TESTING spreadsheet ──────────────────────────────────────
+export async function getSheetDataFromTesting(range: string) {
+  if (!TESTING_SPREADSHEET_ID) {
+    console.warn('GOOGLE_SHEETS_TESTING_SPREADSHEET_ID is not set.');
+    return [];
+  }
+
+  try {
+    const auth = await getAuth();
+    if (!auth) {
+      return await fetchPublicSheetDataFromId(TESTING_SPREADSHEET_ID, range);
+    }
+
+    const sheets = google.sheets({ version: 'v4', auth });
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: TESTING_SPREADSHEET_ID,
+      range,
+    });
+
+    const rows = response.data.values;
+    if (!rows || rows.length === 0) return [];
+
+    const headers = rows[0];
+    return rows.slice(1).map(row => {
+      const rowData: Record<string, string> = {};
+      headers.forEach((header, index) => { rowData[header] = row[index] || ''; });
+      return rowData;
+    });
+  } catch (error) {
+    console.error('Error fetching testing sheet data:', error);
+    return await fetchPublicSheetDataFromId(TESTING_SPREADSHEET_ID, range);
+  }
+}
+
+async function fetchPublicSheetDataFromId(spreadsheetId: string, range: string) {
+  try {
+    const sheetName = range.split('!')[0];
+    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const csvText = await res.text();
+    const rows = parseCSV(csvText);
+    if (!rows || rows.length === 0) return [];
+    const headers = rows[0];
+    return rows.slice(1).map(row => {
+      const rowData: Record<string, string> = {};
+      headers.forEach((header, index) => { rowData[header] = row[index] || ''; });
+      return rowData;
+    });
+  } catch (error) {
+    console.error('Failed to fetch public testing sheet data:', error);
+    return [];
   }
 }
 

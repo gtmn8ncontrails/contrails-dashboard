@@ -1,5 +1,5 @@
 import Dashboard from '@/components/Dashboard';
-import { getSheetData } from '@/lib/googleSheets';
+import { getSheetData, getSheetDataFromTesting } from '@/lib/googleSheets';
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
@@ -22,7 +22,7 @@ export default async function Home() {
     getSheetData('Approved Briefs!A1:Z100'),
     getSheetData('Stage 3 Queue!A1:Z100'),
     getSheetData('Failed QA!A1:Z100'),
-    getSheetData('Rejected Signals!A1:Z100')
+    getSheetDataFromTesting('rejected signals!A1:Z1000')
   ]);
 
   return (
