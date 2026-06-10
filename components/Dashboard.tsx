@@ -6,8 +6,8 @@ import clsx from 'clsx';
 
 type TabType = 'overview' | 'stage1' | 'errors' | 'w2Errors' | 'gtmSignals' | 'approvedBriefs' | 'stage3' | 'failedQa' | 'rejected';
 
-// ── TEXT MODAL ────────────────────────────────────────────────
-const TextModal = ({ text, onClose }: { text: string; onClose: () => void }) => {
+// ── TEXT DRAWER (Popup Sidebar) ──────────────────────────────
+const TextDrawer = ({ text, onClose }: { text: string; onClose: () => void }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -37,39 +37,43 @@ const TextModal = ({ text, onClose }: { text: string; onClose: () => void }) => 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-all duration-300"
+      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-all duration-300"
       onClick={onClose}
     >
       <div
-        className="bg-[#0b0c16] border border-cyan-500/25 rounded-2xl w-full max-w-md max-h-[60vh] flex flex-col shadow-2xl shadow-cyan-500/5 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="bg-[#0b0c16] border-l border-cyan-500/20 w-full max-w-md h-full flex flex-col shadow-2xl overflow-hidden animate-drawer-slide-in"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/[0.02] flex-shrink-0">
-          <button
-            onClick={handleCopy}
-            className={clsx(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-semibold cursor-pointer",
-              copied 
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400" 
-                : "border-cyan-500/30 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/15 hover:shadow-lg hover:shadow-cyan-500/10"
-            )}
-          >
-            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
-          
-          <button 
-            onClick={onClose} 
-            className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 transition-all cursor-pointer"
-            aria-label="Close modal"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02] flex-shrink-0">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cell Details</span>
+          <div className="flex items-center gap-3">
+            {/* Copy Button */}
+            <button
+              onClick={handleCopy}
+              className={clsx(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-semibold cursor-pointer",
+                copied 
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400" 
+                  : "border-cyan-500/30 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/15 hover:shadow-lg hover:shadow-cyan-500/10"
+              )}
+            >
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? 'Copied!' : 'Copy Text'}
+            </button>
+            {/* Close Button */}
+            <button 
+              onClick={onClose} 
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 transition-all cursor-pointer"
+              aria-label="Close drawer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Scrollable content */}
-        <div className="p-5 overflow-y-auto text-sm leading-relaxed text-slate-300 whitespace-pre-wrap break-words select-text flex-1">
+        {/* Scrollable body */}
+        <div className="p-6 overflow-y-auto text-sm leading-relaxed text-slate-300 whitespace-pre-wrap break-words select-text flex-1">
           {text}
         </div>
       </div>
@@ -77,9 +81,9 @@ const TextModal = ({ text, onClose }: { text: string; onClose: () => void }) => 
   );
 };
 
-// ── EXPANDABLE TEXT (now opens modal) ────────────────────────
+// ── EXPANDABLE TEXT (now opens drawer) ────────────────────────
 const ExpandableText = ({ text, maxLength = 80 }: { text: string, maxLength?: number }) => {
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   if (!text || typeof text !== 'string' || text.length <= maxLength) {
     return <div className="max-w-md">{text}</div>;
   }
@@ -88,13 +92,13 @@ const ExpandableText = ({ text, maxLength = 80 }: { text: string, maxLength?: nu
       <div className="max-w-md whitespace-normal leading-relaxed">
         {`${text.slice(0, maxLength)}...`}
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={() => setDrawerOpen(true)}
           className="ml-2 text-c-cyan text-xs font-semibold hover:underline"
         >
           Read more
         </button>
       </div>
-      {modalOpen && <TextModal text={text} onClose={() => setModalOpen(false)} />}
+      {drawerOpen && <TextDrawer text={text} onClose={() => setDrawerOpen(false)} />}
     </>
   );
 };
