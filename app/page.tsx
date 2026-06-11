@@ -15,14 +15,14 @@ export default async function Home() {
     failedQaData,
     rejectedSignalsData
   ] = await Promise.all([
-    getSheetData('Stage 1 Output!A1:Z10000'),
-    getSheetData('w1 errors!A1:Z10000'),
-    getSheetData('W2 Errors!A1:Z10000'),
-    getSheetData('GTM Signals!A1:Z10000'),
-    getSheetData('Approved Briefs!A1:Z10000'),
-    getSheetData('Stage 3 Queue!A1:Z10000'),
-    getSheetData('Failed QA!A1:Z10000'),
-    getSheetData('Rejected Signals!A1:Z10000')
+    getSheetData('Stage 1 Output!A:Z'),
+    getSheetData('w1 errors!A:Z'),
+    getSheetData('W2 Errors!A:Z'),
+    getSheetData('GTM Signals!A:Z'),
+    getSheetData('Approved Briefs!A:Z'),
+    getSheetData('Stage 3 Queue!A:Z'),
+    getSheetData('Failed QA!A:Z'),
+    getSheetData('Rejected Signals!A:Z')
   ]);
 
   return (
