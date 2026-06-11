@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Activity, Database, AlertCircle, CheckCircle, XCircle, Play, ChevronRight, LayoutDashboard, Copy, Check, X } from 'lucide-react';
 import clsx from 'clsx';
 
-type TabType = 'overview' | 'stage1' | 'errors' | 'w2Errors' | 'gtmSignals' | 'approvedBriefs' | 'stage3' | 'failedQa' | 'rejected';
+type TabType = 'overview' | 'stage1' | 'errors' | 'w2Errors' | 'approvedBriefs' | 'stage3' | 'rejected';
 
 // ── TEXT DRAWER (Popup Sidebar) ──────────────────────────────
 const TextDrawer = ({ text, onClose }: { text: string; onClose: () => void }) => {
@@ -320,10 +320,8 @@ export default function Dashboard({ initialData }: { initialData: any }) {
                  activeTab === 'stage1' ? initialData.stage1 :
                  activeTab === 'errors' ? initialData.errors :
                  activeTab === 'w2Errors' ? initialData.w2Errors :
-                 activeTab === 'gtmSignals' ? initialData.gtmSignals :
                  activeTab === 'approvedBriefs' ? initialData.approvedBriefs :
                  activeTab === 'stage3' ? initialData.stage3Queue :
-                 activeTab === 'failedQa' ? initialData.failedQa :
                  activeTab === 'rejected' ? initialData.rejectedSignals :
                  []
                )}
