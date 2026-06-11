@@ -22,7 +22,7 @@ export default async function Home() {
     getSheetData('Approved Briefs!A1:Z100'),
     getSheetData('Stage 3 Queue!A1:Z100'),
     getSheetData('Failed QA!A1:Z100'),
-    getSheetData('Rejected Signals!A1:Z1000')
+    getSheetData('Rejected Signals!A1:Z100')
   ]);
 
   return (
