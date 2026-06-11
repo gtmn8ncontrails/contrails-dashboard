@@ -2,8 +2,11 @@ import { google } from 'googleapis';
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '1vmLWIGBC2ywUQrm2x8WCEDCaep2Jd6v0rM-ysFXBiEw';
 
-// Separate spreadsheet for the "testing" workbook
 const TESTING_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_TESTING_SPREADSHEET_ID || '';
+
+const SHEET_GIDS: Record<string, string> = {
+  'Rejected Signals': '2062199386',
+};
 
 async function getAuth() {
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
@@ -38,7 +41,6 @@ export async function getSheetData(range: string) {
       return [];
     }
 
-    // Assume first row is headers
     const headers = rows[0];
     const data = rows.slice(1).map(row => {
       const rowData: Record<string, string> = {};
@@ -56,7 +58,6 @@ export async function getSheetData(range: string) {
   }
 }
 
-// ── Fetch from the TESTING spreadsheet ──────────────────────────────────────
 export async function getSheetDataFromTesting(range: string) {
   if (!TESTING_SPREADSHEET_ID) {
     console.warn('GOOGLE_SHEETS_TESTING_SPREADSHEET_ID is not set.');
@@ -114,7 +115,10 @@ async function fetchPublicSheetDataFromId(spreadsheetId: string, range: string) 
 async function fetchPublicSheetData(range: string) {
   try {
     const sheetName = range.split('!')[0];
-    const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const gid = SHEET_GIDS[sheetName];
+    const url = gid
+      ? `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`
+      : `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
     
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -122,20 +126,16 @@ async function fetchPublicSheetData(range: string) {
     const csvText = await res.text();
     const rows = parseCSV(csvText);
     
-    if (!rows || rows.length === 0) {
-      return [];
-    }
+    if (!rows || rows.length === 0) return [];
 
     const headers = rows[0];
-    const data = rows.slice(1).map(row => {
+    return rows.slice(1).map(row => {
       const rowData: Record<string, string> = {};
       headers.forEach((header, index) => {
         rowData[header] = row[index] || '';
       });
       return rowData;
     });
-
-    return data;
   } catch (error) {
     console.error('Failed to fetch public sheet data:', error);
     return getMockData(range);
@@ -175,7 +175,7 @@ function parseCSV(csvText: string): string[][] {
 
 function getMockData(range: string) {
   if (range.includes('Stage 1')) {
-     return [
+    return [
       { url: 'https://hivemode', source_type: 'competitor_signal', title: 'Hive - Product Update', relevance_score: '9', affected_person: 'trust_safety_lead', region: 'Global', urgency: 'medium', summary: 'Hive has expanded its moderation suite...' },
       { url: 'https://eur-lex.eu', source_type: 'government_regul', title: 'Council Decision (EU)', relevance_score: '10', affected_person: 'legal_compliance', region: 'EU', urgency: 'high', summary: 'The EU has formally ratified the Council of Europe Framework Convention...' }
     ];
