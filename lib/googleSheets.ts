@@ -1,10 +1,14 @@
 import { google } from 'googleapis';
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '1vmLWIGBC2ywUQrm2x8WCEDCaep2Jd6v0rM-ysFXBiEw';
-
 const TESTING_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_TESTING_SPREADSHEET_ID || '';
 
 const SHEET_GIDS: Record<string, string> = {
+  'Stage 1 Output': '514359377',
+  'w1 errors': '1543605888',
+  'W2 Errors': '19760547',
+  'Approved Briefs': '0',
+  'Stage 3 Queue': '1700518240',
   'Rejected Signals': '2062199386',
 };
 
@@ -13,7 +17,6 @@ async function getAuth() {
     console.warn('Google Service Account credentials missing.');
     return null;
   }
-
   return new google.auth.JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -25,35 +28,23 @@ export async function getSheetData(range: string) {
   try {
     const auth = await getAuth();
     if (!auth) {
-      console.log('No service account auth configured, attempting public CSV fetch...');
       return await fetchPublicSheetData(range);
     }
-
     const sheets = google.sheets({ version: 'v4', auth });
-    
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range,
     });
-
     const rows = response.data.values;
-    if (!rows || rows.length === 0) {
-      return [];
-    }
-
+    if (!rows || rows.length === 0) return [];
     const headers = rows[0];
-    const data = rows.slice(1).map(row => {
+    return rows.slice(1).map(row => {
       const rowData: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        rowData[header] = row[index] || '';
-      });
+      headers.forEach((header, index) => { rowData[header] = row[index] || ''; });
       return rowData;
     });
-
-    return data;
   } catch (error) {
     console.error('Error fetching sheet data via service account:', error);
-    console.log('Attempting public CSV fetch fallback...');
     return await fetchPublicSheetData(range);
   }
 }
@@ -63,22 +54,16 @@ export async function getSheetDataFromTesting(range: string) {
     console.warn('GOOGLE_SHEETS_TESTING_SPREADSHEET_ID is not set.');
     return [];
   }
-
   try {
     const auth = await getAuth();
-    if (!auth) {
-      return await fetchPublicSheetDataFromId(TESTING_SPREADSHEET_ID, range);
-    }
-
+    if (!auth) return await fetchPublicSheetDataFromId(TESTING_SPREADSHEET_ID, range);
     const sheets = google.sheets({ version: 'v4', auth });
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: TESTING_SPREADSHEET_ID,
       range,
     });
-
     const rows = response.data.values;
     if (!rows || rows.length === 0) return [];
-
     const headers = rows[0];
     return rows.slice(1).map(row => {
       const rowData: Record<string, string> = {};
@@ -116,24 +101,18 @@ async function fetchPublicSheetData(range: string) {
   try {
     const sheetName = range.split('!')[0];
     const gid = SHEET_GIDS[sheetName];
-    const url = gid
+    const url = gid !== undefined
       ? `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`
       : `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-    
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    
     const csvText = await res.text();
     const rows = parseCSV(csvText);
-    
     if (!rows || rows.length === 0) return [];
-
     const headers = rows[0];
     return rows.slice(1).map(row => {
       const rowData: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        rowData[header] = row[index] || '';
-      });
+      headers.forEach((header, index) => { rowData[header] = row[index] || ''; });
       return rowData;
     });
   } catch (error) {
@@ -146,17 +125,12 @@ function parseCSV(csvText: string): string[][] {
   const lines: string[][] = [];
   let row: string[] = [""];
   let inQuotes = false;
-
   for (let i = 0; i < csvText.length; i++) {
     const c = csvText[i];
     const next = csvText[i + 1];
     if (c === '"') {
-      if (inQuotes && next === '"') {
-        row[row.length - 1] += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
+      if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+      else { inQuotes = !inQuotes; }
     } else if (c === ',' && !inQuotes) {
       row.push("");
     } else if ((c === '\r' || c === '\n') && !inQuotes) {
@@ -167,9 +141,7 @@ function parseCSV(csvText: string): string[][] {
       row[row.length - 1] += c;
     }
   }
-  if (row.length > 1 || row[0] !== "") {
-    lines.push(row);
-  }
+  if (row.length > 1 || row[0] !== "") lines.push(row);
   return lines;
 }
 
