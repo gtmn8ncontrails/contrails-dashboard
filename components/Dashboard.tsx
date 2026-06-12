@@ -16,11 +16,11 @@ type QueueSubTab = 'queue' | 'w2Errors';
 function getCardFields(row: Record<string, string>) {
   return {
     title:           row.title || row.signal_title || row.brief_title || row.name || '',
-    summary:         row.summary || row.brief_summary || row.description || row.content || '',
+    summary:         row.summary || row.signal_summary || row.brief_summary || row.description || row.content || '',
     urgency:         (row.urgency || '').toLowerCase(),
     sourceType:      row.source_type || row.type || row.signal_type || row.category || '',
-    region:          row.region || '',
-    date:            row.pub_date || row.date || row.published_date || row.created_at || '',
+    region:          row.region || row.affected_region || '',
+    date:            row.pub_date || row.date || row.published_date || row.created_at || row.queued_at || row.approved_date || '',
     relevanceScore:  row.relevance_score || '',
     persona:         row.affected_persona || row.affected_person || row.persona || row.target_persona || '',
     url:             row.url || row.link || '',
