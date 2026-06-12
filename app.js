@@ -295,7 +295,7 @@ function statCard(value, label, color, iconPath) {
 
 function signalMiniCard(s, index) {
   return `
-    <div class="signal-mini" onclick="openSignalModal(${index})">
+    <div class="signal-mini" onclick="openSignalModal(${index}, event)">
       <div class="signal-mini-left">
         ${urgencyDot(s.urgency)}
       </div>
@@ -415,7 +415,7 @@ function renderSignalCards(signals) {
   return signals.map((s, i) => {
     const globalIdx = STATE.signals.indexOf(s);
     return `
-    <div class="signal-card" onclick="openSignalModal(${globalIdx})">
+    <div class="signal-card" onclick="openSignalModal(${globalIdx}, event)">
       <div class="sc-header">
         <div class="sc-badges">
           <span class="badge ${s.urgency}">${escHtml(s.urgency || 'unknown')}</span>
@@ -799,11 +799,12 @@ function applyWorkflowUI(id, status, progress) {
 }
 
 // ── SIGNAL MODAL ───────────────────────────────────────────────────────
-function openSignalModal(index) {
+function openSignalModal(index, evt) {
   const s = STATE.signals[index];
   if (!s) return;
 
   const overlay = document.getElementById('modal-overlay');
+  const modal   = document.getElementById('modal-panel');
   const badge   = document.getElementById('modal-badge');
   const content = document.getElementById('modal-content');
 
@@ -868,8 +869,51 @@ function openSignalModal(index) {
     </div>
   `;
 
+  // Position the panel near the clicked row
+  positionModalNearClick(modal, evt);
+
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  // Reset scroll inside panel to top
+  modal.scrollTop = 0;
+}
+
+function positionModalNearClick(modal, evt) {
+  // Remove any inline positioning first so CSS defaults can be read
+  modal.style.top    = '';
+  modal.style.bottom = '';
+  modal.style.removeProperty('--modal-origin');
+
+  if (!evt) return; // fall back to CSS default (bottom sheet)
+
+  const clickY      = evt.clientY;         // Y position of click within viewport
+  const vpH         = window.innerHeight;  // total viewport height
+  const panelH      = Math.min(vpH * 0.82, 600); // approximate max panel height
+  const gap         = 8;                   // small gap between row and panel
+  const navH        = 70;                  // bottom nav height
+  const headerH     = 62;                  // top header height
+  const usableBot   = vpH - navH;          // bottom boundary to avoid nav
+
+  // Decide: open panel BELOW the click or ABOVE it
+  const spaceBelow = usableBot - clickY - gap;
+  const spaceAbove = clickY - headerH - gap;
+
+  if (spaceBelow >= panelH * 0.45 || spaceBelow >= spaceAbove) {
+    // Enough room below — anchor top of panel just after the clicked row
+    let top = Math.min(clickY + gap, usableBot - panelH);
+    top = Math.max(top, headerH + gap);
+    modal.style.top    = top + 'px';
+    modal.style.bottom = 'auto';
+    modal.style.setProperty('--modal-origin', 'top');
+  } else {
+    // More room above — anchor bottom of panel just before the clicked row
+    let bottom = vpH - clickY + gap;
+    bottom = Math.max(bottom, navH + gap);
+    bottom = Math.min(bottom, vpH - headerH - panelH - gap);
+    modal.style.bottom = bottom + 'px';
+    modal.style.top    = 'auto';
+    modal.style.setProperty('--modal-origin', 'bottom');
+  }
 }
 
 function closeModal() {

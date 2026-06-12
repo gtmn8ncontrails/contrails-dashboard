@@ -7,7 +7,7 @@ import clsx from 'clsx';
 type TabType = 'overview' | 'stage1' | 'errors' | 'w2Errors' | 'approvedBriefs' | 'stage3' | 'rejected';
 
 // ── TEXT DRAWER (Popup Sidebar) ──────────────────────────────
-const TextDrawer = ({ text, onClose }: { text: string; onClose: () => void }) => {
+const TextDrawer = ({ text, onClose, anchorY = 0 }: { text: string; onClose: () => void; anchorY?: number }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -28,28 +28,25 @@ const TextDrawer = ({ text, onClose }: { text: string; onClose: () => void }) =>
     }
   };
 
-  // Close on Escape key & Lock background scroll
+  // Close on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
-    
-    // Save original body overflow and set to hidden
-    const originalOverflow = window.getComputedStyle(document.body).overflow;
-    document.body.style.overflow = 'hidden';
-    
-    return () => {
-      window.removeEventListener('keydown', handler);
-      document.body.style.overflow = originalOverflow;
-    };
+    return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  // Clamp anchorY so there's always at least 120px of drawer visible
+  const clampedTop = Math.min(anchorY, window.innerHeight - 120);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-all duration-300"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
+      {/* Drawer panel anchored to the clicked row */}
       <div
-        className="bg-[#0b0c16] border-l border-cyan-500/20 w-full max-w-md h-[100dvh] flex flex-col shadow-2xl overflow-hidden animate-drawer-slide-in"
+        className="fixed right-0 bg-[#0b0c16] border-l border-cyan-500/20 w-full max-w-md flex flex-col shadow-2xl overflow-hidden animate-drawer-slide-in"
+        style={{ top: `${clampedTop}px`, height: `calc(100dvh - ${clampedTop}px)` }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -92,6 +89,8 @@ const TextDrawer = ({ text, onClose }: { text: string; onClose: () => void }) =>
 // ── EXPANDABLE TEXT (now opens drawer) ────────────────────────
 const ExpandableText = ({ text, maxLength = 80 }: { text: string, maxLength?: number }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [anchorY, setAnchorY] = useState(0);
+
   if (!text || typeof text !== 'string' || text.length <= maxLength) {
     return <div className="max-w-md">{text}</div>;
   }
@@ -100,13 +99,17 @@ const ExpandableText = ({ text, maxLength = 80 }: { text: string, maxLength?: nu
       <div className="max-w-md whitespace-normal leading-relaxed">
         {`${text.slice(0, maxLength)}...`}
         <button
-          onClick={() => setDrawerOpen(true)}
+          onClick={(e) => {
+            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+            setAnchorY(rect.top);
+            setDrawerOpen(true);
+          }}
           className="ml-2 text-c-cyan text-xs font-semibold hover:underline"
         >
           Read more
         </button>
       </div>
-      {drawerOpen && <TextDrawer text={text} onClose={() => setDrawerOpen(false)} />}
+      {drawerOpen && <TextDrawer text={text} anchorY={anchorY} onClose={() => setDrawerOpen(false)} />}
     </>
   );
 };
