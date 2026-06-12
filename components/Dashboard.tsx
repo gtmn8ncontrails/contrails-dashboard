@@ -13,15 +13,26 @@ type SignalSubTab = 'live' | 'errors' | 'rejected';
 type QueueSubTab = 'queue' | 'w2Errors';
 
 // ── FIELD EXTRACTOR ───────────────────────────────────────────────────────────
-function getCardFields(row: Record<string, string>) {
+function getCardFields(row: Record<string, string>, relevanceMap?: Map<string, string>) {
+  const title = row.title || row.signal_title || row.brief_title || row.name || '';
+  let rawScore = row.relevance_score || '';
+  if (!rawScore && relevanceMap && title) {
+    rawScore = relevanceMap.get(title.toLowerCase().trim()) || '';
+  }
+  let cleanScore = '';
+  if (rawScore) {
+    const num = parseFloat(rawScore);
+    cleanScore = isNaN(num) ? rawScore : String(num);
+  }
+
   return {
-    title:           row.title || row.signal_title || row.brief_title || row.name || '',
+    title,
     summary:         row.summary || row.signal_summary || row.brief_summary || row.description || row.content || '',
     urgency:         (row.urgency || '').toLowerCase(),
     sourceType:      row.source_type || row.type || row.signal_type || row.category || '',
     region:          row.region || row.affected_region || '',
     date:            row.pub_date || row.date || row.published_date || row.created_at || row.queued_at || row.approved_date || '',
-    relevanceScore:  row.relevance_score || '',
+    relevanceScore:  cleanScore,
     persona:         row.affected_persona || row.affected_person || row.persona || row.target_persona || '',
     url:             row.url || row.link || '',
     personaGuidance: row.persona_guidance || row.guidance || row.recommendation || '',
@@ -31,13 +42,14 @@ function getCardFields(row: Record<string, string>) {
 
 // ── SIGNAL CARD ───────────────────────────────────────────────────────────────
 const SignalCard = ({
-  row, index, onClick,
+  row, index, onClick, relevanceMap,
 }: {
   row: Record<string, string>;
   index: number;
   onClick: (row: Record<string, string>) => void;
+  relevanceMap?: Map<string, string>;
 }) => {
-  const f = getCardFields(row);
+  const f = getCardFields(row, relevanceMap);
   const displayTitle = f.title || `Entry ${index + 1}`;
 
   const urgencyStyle =
@@ -67,7 +79,7 @@ const SignalCard = ({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-bold font-mono">
-            {f.relevanceScore || (index + 1)}
+            {f.relevanceScore || '-'}
           </div>
         </div>
       </div>
@@ -102,8 +114,8 @@ const SignalCard = ({
 };
 
 // ── DETAIL MODAL ──────────────────────────────────────────────────────────────
-const DetailModal = ({ row, onClose }: { row: Record<string, string>; onClose: () => void }) => {
-  const f = getCardFields(row);
+const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, string>; onClose: () => void; relevanceMap?: Map<string, string> }) => {
+  const f = getCardFields(row, relevanceMap);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -249,7 +261,7 @@ const DetailModal = ({ row, onClose }: { row: Record<string, string>; onClose: (
 };
 
 // ── CARD GRID (search + filter + cards) ──────────────────────────────────────
-const CardGrid = ({ data }: { data: Record<string, string>[] }) => {
+const CardGrid = ({ data, relevanceMap }: { data: Record<string, string>[]; relevanceMap?: Map<string, string> }) => {
   const [search, setSearch] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -371,7 +383,7 @@ const CardGrid = ({ data }: { data: Record<string, string>[] }) => {
       {/* 2-column card grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 pb-24">
         {filtered.map((row, i) => (
-          <SignalCard key={i} row={row} index={i} onClick={setSelected} />
+          <SignalCard key={i} row={row} index={i} onClick={setSelected} relevanceMap={relevanceMap} />
         ))}
         {filtered.length === 0 && (
           <div className="col-span-2 text-center py-20 text-slate-500 text-sm">
@@ -381,7 +393,7 @@ const CardGrid = ({ data }: { data: Record<string, string>[] }) => {
       </div>
 
       {/* Detail modal */}
-      {selected && <DetailModal row={selected} onClose={() => setSelected(null)} />}
+      {selected && <DetailModal row={selected} onClose={() => setSelected(null)} relevanceMap={relevanceMap} />}
     </div>
   );
 };
@@ -392,6 +404,23 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
   const [queueSub, setQueueSub] = useState<QueueSubTab>('queue');
   const [runningStage, setRunningStage] = useState<number | null>(null);
+
+  const relevanceMap = useMemo(() => {
+    const map = new Map<string, string>();
+    initialData?.stage1?.forEach((r: any) => {
+      const title = r.title || r.signal_title || '';
+      if (title && r.relevance_score) {
+        map.set(title.toLowerCase().trim(), String(r.relevance_score));
+      }
+    });
+    initialData?.approvedBriefs?.forEach((r: any) => {
+      const title = r.title || r.signal_title || '';
+      if (title && r.relevance_score) {
+        map.set(title.toLowerCase().trim(), String(r.relevance_score));
+      }
+    });
+    return map;
+  }, [initialData]);
 
   const triggerWorkflow = async (stage: number) => {
     setRunningStage(stage);
@@ -579,7 +608,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
 
         {(activeTab === 'signals' || activeTab === 'briefs' || activeTab === 'queue') && (
           <div className="animate-fade-in">
-            <CardGrid data={activeData} />
+            <CardGrid data={activeData} relevanceMap={relevanceMap} />
           </div>
         )}
 
