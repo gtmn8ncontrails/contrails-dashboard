@@ -445,7 +445,7 @@ const CardGrid = ({ data, relevanceMap }: { data: Record<string, string>[]; rele
 
 // ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 export default function Dashboard({ initialData }: { initialData: any }) {
-  const [activeTab, setActiveTab] = useState<TabType>('signals');
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
   const [queueSub, setQueueSub] = useState<QueueSubTab>('queue');
   const [runningStage, setRunningStage] = useState<number | null>(null);
@@ -526,13 +526,6 @@ export default function Dashboard({ initialData }: { initialData: any }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => window.location.reload()}
-            className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-white/20 transition-all cursor-pointer"
-            title="Refresh dashboard data"
-          >
-            <RotateCw className="w-3.5 h-3.5" />
-          </button>
           <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Active
