@@ -1,26 +1,115 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Activity, Database, AlertCircle, CheckCircle, XCircle, Play, ChevronRight, LayoutDashboard, Copy, Check, X } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import {
+  Database, AlertCircle, CheckCircle, XCircle, Play,
+  ChevronRight, LayoutDashboard, Globe, Calendar,
+  Search, X, Copy, Check, ExternalLink, Activity, FileText, ListTodo, RotateCw
+} from 'lucide-react';
 import clsx from 'clsx';
 
-type TabType = 'overview' | 'stage1' | 'errors' | 'w2Errors' | 'approvedBriefs' | 'stage3' | 'rejected';
+type TabType = 'overview' | 'signals' | 'briefs' | 'queue' | 'run';
+type SignalSubTab = 'live' | 'errors' | 'rejected';
+type QueueSubTab = 'queue' | 'w2Errors';
 
-// ── TEXT POPOVER — pinned to right side, vertically tracks the row ───────────
-const TextPopover = ({
-  text, onClose, anchorRect
+// ── FIELD EXTRACTOR ───────────────────────────────────────────────────────────
+function getCardFields(row: Record<string, string>) {
+  return {
+    title:           row.title || row.signal_title || row.brief_title || row.name || '',
+    summary:         row.summary || row.brief_summary || row.description || row.content || '',
+    urgency:         (row.urgency || '').toLowerCase(),
+    sourceType:      row.source_type || row.type || row.signal_type || row.category || '',
+    region:          row.region || '',
+    date:            row.pub_date || row.date || row.published_date || row.created_at || '',
+    relevanceScore:  row.relevance_score || '',
+    persona:         row.affected_persona || row.affected_person || row.persona || row.target_persona || '',
+    url:             row.url || row.link || '',
+    personaGuidance: row.persona_guidance || row.guidance || row.recommendation || '',
+    clusterTopic:    row.cluster_topic || row.topic || '',
+  };
+}
+
+// ── SIGNAL CARD ───────────────────────────────────────────────────────────────
+const SignalCard = ({
+  row, index, onClick,
 }: {
-  text: string;
-  onClose: () => void;
-  anchorRect: DOMRect;
+  row: Record<string, string>;
+  index: number;
+  onClick: (row: Record<string, string>) => void;
 }) => {
+  const f = getCardFields(row);
+  const displayTitle = f.title || `Entry ${index + 1}`;
+
+  const urgencyStyle =
+    f.urgency === 'high'                          ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+    f.urgency === 'medium' || f.urgency === 'med' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+    f.urgency === 'low'                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+    'bg-slate-500/10 text-slate-400 border-slate-500/20';
+
+  return (
+    <div
+      onClick={() => onClick(row)}
+      className="group flex flex-col gap-3.5 p-5 rounded-2xl border border-white/[0.04] bg-[#0c0d1e]/40 hover:bg-[#0c0d1e]/80 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/5 cursor-pointer transition-all duration-200"
+    >
+      {/* Top: badges + score */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {f.urgency && (
+            <span className={clsx('text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border', urgencyStyle)}>
+              {f.urgency.toUpperCase()}
+            </span>
+          )}
+          {f.sourceType && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border border-indigo-400/20 bg-indigo-400/5 text-indigo-300">
+              {f.sourceType.replace(/_/g, ' ')}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-bold font-mono">
+            {f.relevanceScore || (index + 1)}
+          </div>
+        </div>
+      </div>
+
+      {/* Title */}
+      <h3 className="text-sm font-semibold text-white leading-snug line-clamp-2 group-hover:text-indigo-300 transition-colors">
+        {displayTitle}
+      </h3>
+
+      {/* Summary preview */}
+      {f.summary && (
+        <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">{f.summary}</p>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/[0.04]">
+        <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap">
+          {f.region && (
+            <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{f.region}</span>
+          )}
+          {f.date && (
+            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{f.date}</span>
+          )}
+          {f.clusterTopic && (
+            <span className="text-indigo-400/60 font-medium truncate max-w-[120px]">{f.clusterTopic}</span>
+          )}
+        </div>
+        <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
+      </div>
+    </div>
+  );
+};
+
+// ── DETAIL MODAL ──────────────────────────────────────────────────────────────
+const DetailModal = ({ row, onClose }: { row: Record<string, string>; onClose: () => void }) => {
+  const f = getCardFields(row);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
+    const text = Object.entries(row).map(([k, v]) => `${k}: ${v}`).join('\n');
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     } catch {
       const ta = document.createElement('textarea');
       ta.value = text;
@@ -28,105 +117,274 @@ const TextPopover = ({
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  const urgencyStyle =
+    f.urgency === 'high'                          ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+    f.urgency === 'medium' || f.urgency === 'med' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+    f.urgency === 'low'                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+    'bg-slate-500/10 text-slate-400 border-slate-500/20';
 
-  const vh = window.innerHeight;
-  const RIGHT_MARGIN = 16;    // gap from the right edge of the viewport
-  const POPOVER_W = 380;      // fixed width
-
-  // Align vertically with the clicked row, but clamp so it never goes off screen
-  const MIN_VISIBLE = 120;
-  const top = Math.min(anchorRect.top, vh - MIN_VISIBLE);
-  // Box grows downward from the row; max-height fills the rest of the screen
-  const maxH = vh - top - 12;
+  const dotColor =
+    f.urgency === 'high'                          ? 'bg-red-400' :
+    f.urgency === 'medium' || f.urgency === 'med' ? 'bg-amber-400' :
+    f.urgency === 'low'                           ? 'bg-emerald-400' :
+    'bg-slate-400';
 
   return (
-    <div className="fixed inset-0 z-50" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+      onClick={onClose}
+    >
       <div
-        className="fixed bg-[#0d0e1a] border border-cyan-500/30 rounded-2xl shadow-[0_8px_48px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden"
-        style={{
-          right:     `${RIGHT_MARGIN}px`,
-          top:       `${top}px`,
-          width:     `${POPOVER_W}px`,
-          maxHeight: `${maxH}px`,
-        }}
+        className="relative bg-[#0d0d1e] border border-white/[0.08] rounded-3xl w-full max-w-xl max-h-[85vh] flex flex-col shadow-[0_24px_80px_rgba(0,0,0,0.85)] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* Sticky header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-white/[0.03] flex-shrink-0">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Full Text</span>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-[#0d0d1e] flex-shrink-0">
+          {f.urgency ? (
+            <span className={clsx('inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wider', urgencyStyle)}>
+              <span className={clsx('w-1.5 h-1.5 rounded-full', dotColor)} />
+              {f.urgency.toUpperCase()} URGENCY
+            </span>
+          ) : <span />}
+
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
               className={clsx(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-semibold cursor-pointer",
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer',
                 copied
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                  : "border-cyan-500/30 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/15"
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+                  : 'border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/20'
               )}
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? 'Copied' : 'Copy'}
             </button>
+            {f.url && (
+              <a
+                href={f.url} target="_blank" rel="noreferrer"
+                onClick={e => e.stopPropagation()}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:text-indigo-400 transition-all"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
             <button
               onClick={onClose}
-              className="flex items-center justify-center w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 transition-all cursor-pointer"
-              aria-label="Close"
+              className="flex items-center justify-center w-8 h-8 rounded-full border border-white/10 bg-white/5 text-slate-400 hover:text-white transition-all cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Full text — scrollable if taller than remaining viewport */}
-        <div className="p-5 overflow-y-auto text-sm leading-relaxed text-slate-200 whitespace-pre-wrap break-words select-text drawer-scrollbar flex-1">
-          {text}
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto drawer-scrollbar px-6 py-6 space-y-6">
+          {/* Title */}
+          {f.title && <h2 className="text-lg font-bold text-white leading-snug">{f.title}</h2>}
+
+          {/* Summary */}
+          {f.summary && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2">SUMMARY</p>
+              <p className="text-sm text-slate-300 leading-relaxed">{f.summary}</p>
+            </div>
+          )}
+
+          {/* Persona Guidance */}
+          {f.personaGuidance && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2">PERSONA GUIDANCE</p>
+              <div className="border-l-4 border-indigo-500/60 bg-indigo-500/[0.03] px-4 py-3 rounded-r-xl">
+                <p className="text-sm text-slate-200 leading-relaxed font-medium">{f.personaGuidance}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Details grid */}
+          <div className="space-y-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2">SIGNAL DETAILS</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">SOURCE</p>
+                <p className="text-sm font-semibold text-slate-200 mt-1 capitalize">{f.sourceType.replace(/_/g, ' ') || 'Unknown'}</p>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">REGION</p>
+                <p className="text-sm font-semibold text-slate-200 mt-1">{f.region || 'Global'}</p>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">URGENCY</p>
+                <p className="text-sm font-semibold text-slate-200 mt-1 capitalize">{f.urgency || 'Low'}</p>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">RELEVANCE</p>
+                <p className="text-sm font-semibold text-slate-200 mt-1">{f.relevanceScore ? `${f.relevanceScore} / 10` : 'N/A'}</p>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 col-span-2">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">PERSONA</p>
+                <p className="text-sm font-semibold text-slate-200 mt-1 font-mono">{f.persona || 'None'}</p>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 col-span-2">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">PUBLISHED</p>
+                <p className="text-sm font-semibold text-slate-200 mt-1">{f.date || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-// ── EXPANDABLE TEXT ───────────────────────────────────────────
-const ExpandableText = ({ text, maxLength = 80 }: { text: string, maxLength?: number }) => {
-  const [open, setOpen] = useState(false);
-  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+// ── CARD GRID (search + filter + cards) ──────────────────────────────────────
+const CardGrid = ({ data }: { data: Record<string, string>[] }) => {
+  const [search, setSearch] = useState('');
+  const [urgencyFilter, setUrgencyFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [selected, setSelected] = useState<Record<string, string> | null>(null);
 
-  if (!text || typeof text !== 'string' || text.length <= maxLength) {
-    return <div className="max-w-md">{text}</div>;
-  }
+  const sorted = useMemo(() => {
+    return [...(data || [])].sort((a, b) => {
+      const scoreA = Number(a.relevance_score || 0);
+      const scoreB = Number(b.relevance_score || 0);
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      const w = (u: string) => ({ high: 3, medium: 2, med: 2, low: 1 }[(u || '').toLowerCase()] || 0);
+      return w(b.urgency) - w(a.urgency);
+    });
+  }, [data]);
+
+  const filtered = useMemo(() => {
+    let items = sorted;
+    if (urgencyFilter !== 'all') {
+      items = items.filter(r => (r.urgency || '').toLowerCase() === urgencyFilter);
+    }
+    if (typeFilter !== 'all') {
+      items = items.filter(r => {
+        const typeStr = (r.source_type || r.type || r.signal_type || r.category || '').toLowerCase();
+        if (typeFilter === 'competitor') return typeStr.includes('competitor');
+        if (typeFilter === 'regulatory') return typeStr.includes('reg') || typeStr.includes('compliance');
+        if (typeFilter === 'cisa') return typeStr.includes('gov') || typeStr.includes('cisa') || typeStr.includes('site');
+        if (typeFilter === 'research') return typeStr.includes('research') || typeStr.includes('paper');
+        if (typeFilter === 'events') return typeStr.includes('event') || typeStr.includes('news');
+        return true;
+      });
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      items = items.filter(r => Object.values(r).some(v => v?.toLowerCase().includes(q)));
+    }
+    return items;
+  }, [sorted, urgencyFilter, typeFilter, search]);
+
+  const urgencyPills = [
+    { value: 'all',    label: 'All Urgency' },
+    { value: 'high',   label: 'High' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'low',    label: 'Low' },
+  ];
+
+  const typePills = [
+    { value: 'all',        label: 'All Types' },
+    { value: 'competitor', label: 'Competitor' },
+    { value: 'regulatory', label: 'Regulatory' },
+    { value: 'cisa',       label: 'CISA/Gov' },
+    { value: 'research',   label: 'Research' },
+    { value: 'events',     label: 'Events' },
+  ];
+
   return (
-    <>
-      <div className="max-w-md whitespace-normal leading-relaxed">
-        {`${text.slice(0, maxLength)}...`}
-        <button
-          onClick={(e) => {
-            setAnchorRect((e.currentTarget as HTMLButtonElement).getBoundingClientRect());
-            setOpen(true);
-          }}
-          className="ml-2 text-c-cyan text-xs font-semibold hover:underline cursor-pointer"
-        >
-          Read more
-        </button>
+    <div className="flex flex-col gap-4">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Search signals, summaries..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full bg-[#0d0d1e] border border-white/[0.06] rounded-2xl pl-10 pr-10 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/40 focus:bg-[#0c0d1e] transition-all"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
-      {open && anchorRect && (
-        <TextPopover text={text} anchorRect={anchorRect} onClose={() => setOpen(false)} />
-      )}
-    </>
+
+      {/* Urgency filter pills */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {urgencyPills.map(({ value, label }) => {
+          const isActive = urgencyFilter === value;
+          return (
+            <button
+              key={value}
+              onClick={() => setUrgencyFilter(value)}
+              className={clsx(
+                'px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer',
+                isActive
+                  ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
+                  : 'border-white/5 bg-[#0f1023]/60 text-slate-400 hover:border-white/10 hover:text-slate-200'
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Type filter pills */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {typePills.map(({ value, label }) => {
+          const isActive = typeFilter === value;
+          return (
+            <button
+              key={value}
+              onClick={() => setTypeFilter(value)}
+              className={clsx(
+                'px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer',
+                isActive
+                  ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
+                  : 'border-white/5 bg-[#0f1023]/60 text-slate-400 hover:border-white/10 hover:text-slate-200'
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Result count */}
+      <p className="text-xs text-slate-500 mt-1 font-medium">{filtered.length} of {data.length} signals</p>
+
+      {/* 2-column card grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 pb-24">
+        {filtered.map((row, i) => (
+          <SignalCard key={i} row={row} index={i} onClick={setSelected} />
+        ))}
+        {filtered.length === 0 && (
+          <div className="col-span-2 text-center py-20 text-slate-500 text-sm">
+            No signals match your filters.
+          </div>
+        )}
+      </div>
+
+      {/* Detail modal */}
+      {selected && <DetailModal row={selected} onClose={() => setSelected(null)} />}
+    </div>
   );
 };
 
+// ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 export default function Dashboard({ initialData }: { initialData: any }) {
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>('signals');
+  const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
+  const [queueSub, setQueueSub] = useState<QueueSubTab>('queue');
   const [runningStage, setRunningStage] = useState<number | null>(null);
 
   const triggerWorkflow = async (stage: number) => {
@@ -137,212 +395,209 @@ export default function Dashboard({ initialData }: { initialData: any }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage }),
       });
-      
       const data = await res.json();
-      
       if (res.ok && data.success) {
         alert(`Stage ${stage} workflow triggered successfully!`);
       } else {
         alert(`Failed to trigger Stage ${stage}: ${data.error || 'Unknown error'}`);
       }
-    } catch (err) {
+    } catch {
       alert(`Error triggering stage ${stage}`);
     } finally {
       setRunningStage(null);
     }
   };
 
-  const tabs = [
-    { id: 'overview', label: 'Command Center', icon: LayoutDashboard },
-    { id: 'stage1', label: 'Stage 1 Output', icon: Database },
-    { id: 'errors', label: 'W1 Errors', icon: AlertCircle },
-    { id: 'w2Errors', label: 'W2 Errors', icon: AlertCircle },
-    { id: 'approvedBriefs', label: 'Approved Briefs', icon: CheckCircle },
-    { id: 'stage3', label: 'Stage 3 Queue', icon: Database },
-    { id: 'rejected', label: 'Rejected Signals', icon: XCircle },
-  ];
+  const navItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'signals',  label: 'Signals',  icon: Activity },
+    { id: 'briefs',   label: 'Briefs',   icon: FileText },
+    { id: 'queue',    label: 'Queue',    icon: ListTodo },
+    { id: 'run',      label: 'Run',      icon: Play },
+  ] as const;
 
-  const renderTable = (data: any[]) => {
-    if (!data || data.length === 0) return <div className="text-c-muted p-4">No data available.</div>;
-    
-    // Sort data descending by relevance_score, and then by urgency (High > Medium > Low)
-    const sortedData = [...data].sort((a, b) => {
-      const scoreA = a.relevance_score ? Number(a.relevance_score) : 0;
-      const scoreB = b.relevance_score ? Number(b.relevance_score) : 0;
-      
-      if (scoreA !== scoreB) {
-        return scoreB - scoreA;
-      }
-      
-      const getUrgencyWeight = (urgency: string) => {
-        if (!urgency) return 0;
-        const u = String(urgency).toLowerCase();
-        if (u === 'high') return 3;
-        if (u === 'medium' || u === 'med') return 2;
-        if (u === 'low') return 1;
-        return 0;
-      };
-      
-      const urgencyA = getUrgencyWeight(a.urgency);
-      const urgencyB = getUrgencyWeight(b.urgency);
-      
-      return urgencyB - urgencyA;
-    });
-
-    const headers = Object.keys(sortedData[0] || {});
-    
-    return (
-      <div className="overflow-x-auto">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th style={{ width: '2.5rem', minWidth: '2.5rem', textAlign: 'center' }}>#</th>
-              {headers.map(h => <th key={h}>{h.replace(/_/g, ' ')}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedData.map((row, i) => (
-              <tr key={i}>
-                <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: 'var(--c-muted)', fontWeight: 600, fontSize: '0.75rem' }}>{i + 1}</td>
-                {headers.map(h => (
-                  <td key={h}>
-                    {h === 'url' ? (
-                      <a href={row[h]} target="_blank" rel="noreferrer" className="text-c-cyan hover:underline">Link</a>
-                    ) : h === 'urgency' ? (
-                      <span className={clsx('badge', `badge-${row[h].toLowerCase()}`)}>{row[h]}</span>
-                    ) : (
-                      <ExpandableText text={row[h]} />
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
+  // Compute active data set based on active tab and sub-tab selection
+  const activeData: Record<string, string>[] = useMemo(() => {
+    if (activeTab === 'briefs') return initialData?.approvedBriefs || [];
+    if (activeTab === 'signals') {
+      if (signalSub === 'errors') return initialData?.errors || [];
+      if (signalSub === 'rejected') return initialData?.rejectedSignals || [];
+      return initialData?.stage1 || [];
+    }
+    if (activeTab === 'queue') {
+      if (queueSub === 'w2Errors') return initialData?.w2Errors || [];
+      return initialData?.stage3Queue || [];
+    }
+    return [];
+  }, [activeTab, signalSub, queueSub, initialData]);
 
   return (
-    <div className="min-h-screen bg-c-bg text-c-text flex flex-col md:flex-row">
-      {/* Sidebar (Desktop) / Top bar (Mobile) */}
-      <aside className="glass m-2 md:m-4 md:mr-0 md:w-64 p-4 flex flex-col shrink-0 z-10">
-        <div className="flex items-center gap-3 mb-8 px-2">
-          <img src="/logo.png" alt="Contrails AI" className="w-8 h-8 rounded-lg object-contain shadow-cyan" />
-          <h1 className="font-bold text-lg tracking-tight">Contrails <span className="text-c-cyan">AI</span></h1>
+    <div className="min-h-screen bg-[#070711] text-[#e2e8f0] flex flex-col font-sans antialiased">
+      {/* Top Header */}
+      <header className="flex justify-between items-center px-4 md:px-8 py-4 bg-[#070711] border-b border-white/[0.04] sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-lg shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+            C
+          </div>
+          <div>
+            <h1 className="font-bold text-sm text-white tracking-tight leading-none">Contrails AI</h1>
+            <p className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase mt-1">GTM Signals</p>
+          </div>
         </div>
 
-        <nav className="flex flex-row md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.location.reload()}
+            className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-white/20 transition-all cursor-pointer"
+            title="Refresh dashboard data"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+          </button>
+          <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Active
+          </span>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 md:px-8 py-6">
+        
+        {/* Sub-Tab Navigation for Signals/Queue */}
+        {activeTab === 'signals' && (
+          <div className="flex border-b border-white/[0.04] mb-5">
+            {[
+              { id: 'live', label: 'Stage 1 Signals' },
+              { id: 'errors', label: 'W1 Errors' },
+              { id: 'rejected', label: 'Rejected Signals' },
+            ].map(sub => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
+                key={sub.id}
+                onClick={() => setSignalSub(sub.id as SignalSubTab)}
                 className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all whitespace-nowrap text-sm font-medium",
-                  isActive ? "bg-c-cyan-dim text-c-cyan" : "text-c-muted hover:text-white hover:bg-white/5"
+                  'px-4 py-2 text-xs font-semibold border-b-2 -mb-[2px] transition-colors cursor-pointer',
+                  signalSub === sub.id
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-300'
                 )}
               >
-                <Icon className="w-4 h-4" />
-                {tab.label}
+                {sub.label}
               </button>
-            )
-          })}
-        </nav>
-      </aside>
+            ))}
+          </div>
+        )}
 
-      {/* Main Content */}
-      <main className="flex-1 p-2 md:p-4 overflow-hidden flex flex-col h-[100dvh]">
-        <div className="glass flex-1 overflow-y-auto p-4 md:p-6 relative">
-          
-          {/* Header */}
-          <header className="flex justify-between items-center mb-8 border-b border-c-border pb-4">
-            <div>
-              <h2 className="text-2xl font-bold">{tabs.find(t => t.id === activeTab)?.label}</h2>
-              <p className="text-c-muted text-sm mt-1">Live from Google Sheets & n8n</p>
-            </div>
-            {activeTab === 'overview' && (
-              <div className="flex gap-2">
-                <span className="flex items-center gap-2 text-xs text-c-green bg-c-green-dim px-3 py-1 rounded-full border border-c-green/30">
-                  <span className="pulse-dot"></span> Pipeline Active
-                </span>
-              </div>
-            )}
-          </header>
+        {activeTab === 'queue' && (
+          <div className="flex border-b border-white/[0.04] mb-5">
+            {[
+              { id: 'queue', label: 'Stage 3 Queue' },
+              { id: 'w2Errors', label: 'W2 Errors' },
+            ].map(sub => (
+              <button
+                key={sub.id}
+                onClick={() => setQueueSub(sub.id as QueueSubTab)}
+                className={clsx(
+                  'px-4 py-2 text-xs font-semibold border-b-2 -mb-[2px] transition-colors cursor-pointer',
+                  queueSub === sub.id
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-300'
+                )}
+              >
+                {sub.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-          {/* Content Area */}
-          {activeTab === 'overview' ? (
-            <div className="space-y-8 animate-fade-in">
-              {/* Stats Row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: 'Total Signals', value: initialData.stage1?.length || 0, color: 'cyan' },
-                  { label: 'Approved Briefs', value: initialData.approvedBriefs?.length || 0, color: 'purple' },
-                  { label: 'Queue', value: initialData.stage3Queue?.length || 0, color: 'amber' },
-                  { label: 'Errors', value: (initialData.errors?.length || 0) + (initialData.w2Errors?.length || 0), color: 'red' },
-                ].map((s, i) => (
-                  <div key={i} className="glass-sm p-4 stat-card flex flex-col justify-between">
-                    <span className="text-c-muted text-xs font-semibold uppercase tracking-wider">{s.label}</span>
-                    <span className={`text-2xl font-bold mt-2 text-c-${s.color}`}>{s.value}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Workflow Triggers */}
-              <div className="glass-sm p-6">
-                <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                  <Play className="w-5 h-5 text-c-cyan" /> Trigger Workflows
-                </h3>
-                
-                <div className="flex flex-col md:flex-row items-center gap-4 justify-between relative">
-                  {/* Connectors (Desktop only) */}
-                  <div className="hidden md:block absolute top-1/2 left-[15%] right-[15%] h-[2px] bg-c-border -z-10"></div>
-
-                  {[1, 2, 3].map((stage) => (
-                    <div key={stage} className="flex flex-col items-center glass p-6 rounded-xl w-full md:w-1/3 bg-c-surface relative z-0">
-                      <div className="w-12 h-12 rounded-full bg-c-cyan-dim border border-c-cyan/30 flex items-center justify-center mb-4 text-c-cyan font-bold text-lg">
-                        {stage}
-                      </div>
-                      <h4 className="font-semibold mb-1">Stage {stage}</h4>
-                      <p className="text-xs text-c-muted text-center mb-6 h-8">
-                        {stage === 1 ? 'Scrape signals & papers' : stage === 2 ? 'Generate briefs & score' : 'Create narratives & posts'}
-                      </p>
-                      <button 
-                        onClick={() => triggerWorkflow(stage)}
-                        disabled={runningStage !== null}
-                        className={clsx(
-                          "w-full py-2 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2",
-                          runningStage === stage ? "bg-c-cyan/20 text-c-cyan" : "bg-c-cyan text-black hover:shadow-cyan"
-                        )}
-                      >
-                        {runningStage === stage ? (
-                          <span className="flex items-center gap-2"><span className="animate-spin">⍥</span> Running...</span>
-                        ) : (
-                          <>Run Workflow <ChevronRight className="w-4 h-4" /></>
-                        )}
-                      </button>
-                    </div>
-                  ))}
+        {/* tab panes */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6 animate-fade-in pb-20">
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Signals',   value: initialData.stage1?.length || 0,        color: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/5' },
+                { label: 'Approved Briefs', value: initialData.approvedBriefs?.length || 0, color: 'text-purple-400 border-purple-500/20 bg-purple-500/5' },
+                { label: 'Queue',           value: initialData.stage3Queue?.length || 0,    color: 'text-amber-400 border-amber-500/20 bg-amber-500/5' },
+                { label: 'Errors',          value: (initialData.errors?.length || 0) + (initialData.w2Errors?.length || 0), color: 'text-red-400 border-red-500/20 bg-red-500/5' },
+              ].map((s, i) => (
+                <div key={i} className={clsx('p-4 border rounded-2xl flex flex-col justify-between h-24', s.color)}>
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{s.label}</span>
+                  <span className="text-2xl font-bold font-mono">{s.value}</span>
                 </div>
-              </div>
+              ))}
             </div>
-          ) : (
-             <div className="animate-fade-in glass-sm p-1 rounded-xl overflow-hidden">
-               {renderTable(
-                 activeTab === 'stage1' ? initialData.stage1 :
-                 activeTab === 'errors' ? initialData.errors :
-                 activeTab === 'w2Errors' ? initialData.w2Errors :
-                 activeTab === 'approvedBriefs' ? initialData.approvedBriefs :
-                 activeTab === 'stage3' ? initialData.stage3Queue :
-                 activeTab === 'rejected' ? initialData.rejectedSignals :
-                 []
-               )}
-             </div>
-          )}
-        </div>
+
+            {/* Quick overview welcome */}
+            <div className="border border-white/[0.04] bg-[#0c0d1e]/40 p-6 rounded-2xl">
+              <h2 className="text-base font-bold text-white mb-2">Welcome to GTM Command Center</h2>
+              <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
+                This dashboard tracks inbound signals and scrapes relevant papers, triggers scoring algorithms, builds narratives, and posts them to your marketing queues.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'run' && (
+          <div className="space-y-5 pb-20 animate-fade-in">
+            <h2 className="text-base font-bold text-white mb-4">Run Pipelines & Workflows</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map(stage => (
+                <div key={stage} className="flex flex-col border border-white/[0.06] bg-[#0c0d1e]/40 p-5 rounded-2xl">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center mb-4 text-indigo-400 font-bold text-sm">
+                    {stage}
+                  </div>
+                  <h4 className="font-bold text-sm mb-1 text-white">Stage {stage}</h4>
+                  <p className="text-xs text-slate-500 mb-6 h-8">
+                    {stage === 1 ? 'Scrape signals & papers' : stage === 2 ? 'Generate briefs & score' : 'Create narratives & posts'}
+                  </p>
+                  <button
+                    onClick={() => triggerWorkflow(stage)}
+                    disabled={runningStage !== null}
+                    className={clsx(
+                      'w-full py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer',
+                      runningStage === stage
+                        ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                        : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.3)]'
+                    )}
+                  >
+                    {runningStage === stage
+                      ? <span className="flex items-center gap-2"><span className="animate-spin">⍥</span> Running...</span>
+                      : <>Run Workflow <ChevronRight className="w-3.5 h-3.5" /></>
+                    }
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(activeTab === 'signals' || activeTab === 'briefs' || activeTab === 'queue') && (
+          <div className="animate-fade-in">
+            <CardGrid data={activeData} />
+          </div>
+        )}
+
       </main>
+
+      {/* Sticky Bottom Tab Bar Navigation */}
+      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-[#070711]/90 backdrop-blur-lg border-t border-white/[0.06] safe-bottom">
+        <div className="max-w-md mx-auto flex justify-around items-center h-16 px-4">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all cursor-pointer"
+              >
+                <Icon className={clsx('w-5 h-5 transition-transform duration-200', isActive ? 'text-indigo-400 scale-110' : 'text-slate-500 hover:text-slate-300')} />
+                <span className={clsx('text-[9px] mt-1 font-semibold tracking-wider transition-colors', isActive ? 'text-indigo-400 font-bold' : 'text-slate-500')}>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </footer>
     </div>
   );
 }
