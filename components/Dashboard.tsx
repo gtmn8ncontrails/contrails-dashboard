@@ -1,14 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Activity, Database, AlertCircle, CheckCircle, XCircle, Play, ChevronRight, LayoutDashboard, Copy, Check, X } from 'lucide-react';
 import clsx from 'clsx';
 
 type TabType = 'overview' | 'stage1' | 'errors' | 'w2Errors' | 'approvedBriefs' | 'stage3' | 'rejected';
 
-// ── TEXT DRAWER (Popup Sidebar) ──────────────────────────────
-const TextDrawer = ({ text, onClose, anchorY = 0 }: { text: string; onClose: () => void; anchorY?: number }) => {
+// ── TEXT POPOVER (floats next to button) ─────────────────────
+const TextPopover = ({
+  text, onClose, anchorRect
+}: {
+  text: string;
+  onClose: () => void;
+  anchorRect: DOMRect;
+}) => {
   const [copied, setCopied] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
 
   const handleCopy = async () => {
     try {
@@ -16,7 +23,6 @@ const TextDrawer = ({ text, onClose, anchorY = 0 }: { text: string; onClose: () 
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback
       const ta = document.createElement('textarea');
       ta.value = text;
       document.body.appendChild(ta);
@@ -28,57 +34,75 @@ const TextDrawer = ({ text, onClose, anchorY = 0 }: { text: string; onClose: () 
     }
   };
 
-  // Close on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Clamp anchorY so there's always at least 120px of drawer visible
-  const clampedTop = Math.min(anchorY, window.innerHeight - 120);
+  // Smart positioning: place right of button, fall back to left if no space
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const POPOVER_W = Math.min(460, vw - 32);
+  const GAP = 10;
+
+  let left = anchorRect.right + GAP;
+  if (left + POPOVER_W > vw - 12) {
+    // Not enough space on the right — try left side
+    left = anchorRect.left - POPOVER_W - GAP;
+  }
+  // Last resort: clamp to viewport edge
+  left = Math.max(12, Math.min(left, vw - POPOVER_W - 12));
+
+  // Vertical: align top with button, clamp so box stays on screen
+  const MAX_H = Math.round(vh * 0.72);
+  let top = anchorRect.top;
+  if (top + MAX_H > vh - 12) {
+    top = Math.max(12, vh - MAX_H - 12);
+  }
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      {/* Drawer panel anchored to the clicked row */}
+    // Transparent full-screen backdrop — click outside to close
+    <div className="fixed inset-0 z-50" onClick={onClose}>
       <div
-        className="fixed right-0 bg-[#0b0c16] border-l border-cyan-500/20 w-full max-w-md flex flex-col shadow-2xl overflow-hidden animate-drawer-slide-in"
-        style={{ top: `${clampedTop}px`, height: `calc(100dvh - ${clampedTop}px)` }}
+        ref={boxRef}
+        className="fixed bg-[#0d0e1a] border border-cyan-500/30 rounded-2xl shadow-[0_8px_48px_rgba(0,0,0,0.7)] flex flex-col overflow-hidden"
+        style={{
+          left: `${left}px`,
+          top: `${top}px`,
+          width: `${POPOVER_W}px`,
+          maxHeight: `${MAX_H}px`,
+        }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02] flex-shrink-0">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cell Details</span>
-          <div className="flex items-center gap-3">
-            {/* Copy Button */}
+        {/* Header — always visible */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-white/[0.03] flex-shrink-0">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Full Text</span>
+          <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
               className={clsx(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-semibold cursor-pointer",
-                copied 
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400" 
-                  : "border-cyan-500/30 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/15 hover:shadow-lg hover:shadow-cyan-500/10"
+                copied
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                  : "border-cyan-500/30 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/15"
               )}
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied!' : 'Copy Text'}
+              {copied ? 'Copied!' : 'Copy'}
             </button>
-            {/* Close Button */}
-            <button 
-              onClick={onClose} 
-              className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 transition-all cursor-pointer"
-              aria-label="Close drawer"
+            <button
+              onClick={onClose}
+              className="flex items-center justify-center w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200 transition-all cursor-pointer"
+              aria-label="Close"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Scrollable body */}
-        <div className="p-6 overflow-y-auto text-sm leading-relaxed text-slate-300 whitespace-pre-wrap break-words select-text flex-1 drawer-scrollbar">
+        {/* Text body — scrolls only if text is very long */}
+        <div className="p-5 overflow-y-auto text-sm leading-relaxed text-slate-200 whitespace-pre-wrap break-words select-text drawer-scrollbar">
           {text}
         </div>
       </div>
@@ -86,10 +110,10 @@ const TextDrawer = ({ text, onClose, anchorY = 0 }: { text: string; onClose: () 
   );
 };
 
-// ── EXPANDABLE TEXT (now opens drawer) ────────────────────────
+// ── EXPANDABLE TEXT ───────────────────────────────────────────
 const ExpandableText = ({ text, maxLength = 80 }: { text: string, maxLength?: number }) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [anchorY, setAnchorY] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
 
   if (!text || typeof text !== 'string' || text.length <= maxLength) {
     return <div className="max-w-md">{text}</div>;
@@ -100,16 +124,17 @@ const ExpandableText = ({ text, maxLength = 80 }: { text: string, maxLength?: nu
         {`${text.slice(0, maxLength)}...`}
         <button
           onClick={(e) => {
-            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-            setAnchorY(rect.top);
-            setDrawerOpen(true);
+            setAnchorRect((e.currentTarget as HTMLButtonElement).getBoundingClientRect());
+            setOpen(true);
           }}
-          className="ml-2 text-c-cyan text-xs font-semibold hover:underline"
+          className="ml-2 text-c-cyan text-xs font-semibold hover:underline cursor-pointer"
         >
           Read more
         </button>
       </div>
-      {drawerOpen && <TextDrawer text={text} anchorY={anchorY} onClose={() => setDrawerOpen(false)} />}
+      {open && anchorRect && (
+        <TextPopover text={text} anchorRect={anchorRect} onClose={() => setOpen(false)} />
+      )}
     </>
   );
 };
