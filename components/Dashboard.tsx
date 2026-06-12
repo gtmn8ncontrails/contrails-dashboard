@@ -6,7 +6,7 @@ import clsx from 'clsx';
 
 type TabType = 'overview' | 'stage1' | 'errors' | 'w2Errors' | 'approvedBriefs' | 'stage3' | 'rejected';
 
-// ── TEXT POPOVER (floats next to button) ─────────────────────
+// ── TEXT POPOVER — pinned to right side, vertically tracks the row ───────────
 const TextPopover = ({
   text, onClose, anchorRect
 }: {
@@ -15,7 +15,6 @@ const TextPopover = ({
   anchorRect: DOMRect;
 }) => {
   const [copied, setCopied] = useState(false);
-  const boxRef = useRef<HTMLDivElement>(null);
 
   const handleCopy = async () => {
     try {
@@ -40,42 +39,29 @@ const TextPopover = ({
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Smart positioning: place right of button, fall back to left if no space
-  const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const POPOVER_W = Math.min(460, vw - 32);
-  const GAP = 10;
+  const RIGHT_MARGIN = 16;    // gap from the right edge of the viewport
+  const POPOVER_W = 380;      // fixed width
 
-  let left = anchorRect.right + GAP;
-  if (left + POPOVER_W > vw - 12) {
-    // Not enough space on the right — try left side
-    left = anchorRect.left - POPOVER_W - GAP;
-  }
-  // Last resort: clamp to viewport edge
-  left = Math.max(12, Math.min(left, vw - POPOVER_W - 12));
-
-  // Vertical: align top with button, clamp so box stays on screen
-  const MAX_H = Math.round(vh * 0.72);
-  let top = anchorRect.top;
-  if (top + MAX_H > vh - 12) {
-    top = Math.max(12, vh - MAX_H - 12);
-  }
+  // Align vertically with the clicked row, but clamp so it never goes off screen
+  const MIN_VISIBLE = 120;
+  const top = Math.min(anchorRect.top, vh - MIN_VISIBLE);
+  // Box grows downward from the row; max-height fills the rest of the screen
+  const maxH = vh - top - 12;
 
   return (
-    // Transparent full-screen backdrop — click outside to close
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <div
-        ref={boxRef}
-        className="fixed bg-[#0d0e1a] border border-cyan-500/30 rounded-2xl shadow-[0_8px_48px_rgba(0,0,0,0.7)] flex flex-col overflow-hidden"
+        className="fixed bg-[#0d0e1a] border border-cyan-500/30 rounded-2xl shadow-[0_8px_48px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden"
         style={{
-          left: `${left}px`,
-          top: `${top}px`,
-          width: `${POPOVER_W}px`,
-          maxHeight: `${MAX_H}px`,
+          right:     `${RIGHT_MARGIN}px`,
+          top:       `${top}px`,
+          width:     `${POPOVER_W}px`,
+          maxHeight: `${maxH}px`,
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header — always visible */}
+        {/* Sticky header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-white/[0.03] flex-shrink-0">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Full Text</span>
           <div className="flex items-center gap-2">
@@ -101,8 +87,8 @@ const TextPopover = ({
           </div>
         </div>
 
-        {/* Text body — scrolls only if text is very long */}
-        <div className="p-5 overflow-y-auto text-sm leading-relaxed text-slate-200 whitespace-pre-wrap break-words select-text drawer-scrollbar">
+        {/* Full text — scrollable if taller than remaining viewport */}
+        <div className="p-5 overflow-y-auto text-sm leading-relaxed text-slate-200 whitespace-pre-wrap break-words select-text drawer-scrollbar flex-1">
           {text}
         </div>
       </div>
