@@ -113,6 +113,58 @@ const SignalCard = ({
   );
 };
 
+// ── COPY BUTTON & DETAIL BOX HELPERS ──────────────────────────────────────────
+const CopyButton = ({ text, tooltip, className }: { text: string; tooltip?: string; className?: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className={clsx("p-1 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-all cursor-pointer flex items-center justify-center", className)}
+      title={tooltip || "Copy text"}
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+};
+
+const DetailBox = ({ label, value, isLong }: { label: string; value: string; isLong: boolean }) => {
+  return (
+    <div
+      className={clsx(
+        "relative bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 group/box transition-all hover:border-white/[0.08] hover:bg-white/[0.03]",
+        isLong ? "col-span-2" : "col-span-1"
+      )}
+    >
+      <CopyButton
+        text={value}
+        tooltip={`Copy ${label}`}
+        className="absolute top-2.5 right-2.5 opacity-0 group-hover/box:opacity-100 transition-opacity"
+      />
+      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 pr-6 select-none">
+        {label}
+      </p>
+      <p className="text-sm font-semibold text-slate-200 mt-1 break-words pr-6">
+        {value}
+      </p>
+    </div>
+  );
+};
+
 // ── DETAIL MODAL ──────────────────────────────────────────────────────────────
 const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, string>; onClose: () => void; relevanceMap?: Map<string, string> }) => {
   const f = getCardFields(row, relevanceMap);
@@ -175,7 +227,7 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
               )}
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? 'Copied' : 'Copy All'}
             </button>
             {f.url && (
               <a
@@ -202,25 +254,37 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
 
           {/* Summary */}
           {f.summary && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2">SUMMARY</p>
+            <div className="relative group/summary">
+              <div className="flex justify-between items-center mb-2 select-none">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80">SUMMARY</p>
+                <CopyButton
+                  text={f.summary}
+                  tooltip="Copy Summary"
+                  className="opacity-0 group-hover/summary:opacity-100 transition-opacity"
+                />
+              </div>
               <p className="text-sm text-slate-300 leading-relaxed">{f.summary}</p>
             </div>
           )}
 
           {/* Persona Guidance */}
           {f.personaGuidance && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2">PERSONA GUIDANCE</p>
-              <div className="border-l-4 border-indigo-500/60 bg-indigo-500/[0.03] px-4 py-3 rounded-r-xl">
-                <p className="text-sm text-slate-200 leading-relaxed font-medium">{f.personaGuidance}</p>
+            <div className="relative group/guidance">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2 select-none">PERSONA GUIDANCE</p>
+              <div className="relative border-l-4 border-indigo-500/60 bg-indigo-500/[0.03] px-4 py-3 rounded-r-xl group/guidance-box transition-all hover:bg-indigo-500/[0.05]">
+                <CopyButton
+                  text={f.personaGuidance}
+                  tooltip="Copy Guidance"
+                  className="absolute top-2.5 right-2.5 opacity-0 group-hover/guidance-box:opacity-100 transition-opacity"
+                />
+                <p className="text-sm text-slate-200 leading-relaxed font-medium pr-6">{f.personaGuidance}</p>
               </div>
             </div>
           )}
 
           {/* Details grid */}
           <div className="space-y-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2">SIGNAL DETAILS</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2 select-none">SIGNAL DETAILS</p>
             <div className="grid grid-cols-2 gap-2.5">
               {Object.entries(row)
                 .filter(([k, v]) => {
@@ -236,20 +300,12 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
                 .map(([key, val]) => {
                   const isLongVal = val.length > 40 || key.toLowerCase().includes('reason') || key.toLowerCase().includes('message') || key.toLowerCase().includes('error') || key.toLowerCase().includes('persona') || key.toLowerCase().includes('guidance');
                   return (
-                    <div
+                    <DetailBox
                       key={key}
-                      className={clsx(
-                        "bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3",
-                        isLongVal ? "col-span-2" : "col-span-1"
-                      )}
-                    >
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                        {key.replace(/_/g, ' ')}
-                      </p>
-                      <p className="text-sm font-semibold text-slate-200 mt-1 break-words">
-                        {val}
-                      </p>
-                    </div>
+                      label={key.replace(/_/g, ' ')}
+                      value={val}
+                      isLong={isLongVal}
+                    />
                   );
                 })}
             </div>
