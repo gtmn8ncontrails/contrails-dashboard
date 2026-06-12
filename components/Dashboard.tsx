@@ -210,30 +210,36 @@ const DetailModal = ({ row, onClose }: { row: Record<string, string>; onClose: (
           <div className="space-y-2.5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2">SIGNAL DETAILS</p>
             <div className="grid grid-cols-2 gap-2.5">
-              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">SOURCE</p>
-                <p className="text-sm font-semibold text-slate-200 mt-1 capitalize">{f.sourceType.replace(/_/g, ' ') || 'Unknown'}</p>
-              </div>
-              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">REGION</p>
-                <p className="text-sm font-semibold text-slate-200 mt-1">{f.region || 'Global'}</p>
-              </div>
-              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">URGENCY</p>
-                <p className="text-sm font-semibold text-slate-200 mt-1 capitalize">{f.urgency || 'Low'}</p>
-              </div>
-              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">RELEVANCE</p>
-                <p className="text-sm font-semibold text-slate-200 mt-1">{f.relevanceScore ? `${f.relevanceScore} / 10` : 'N/A'}</p>
-              </div>
-              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 col-span-2">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">PERSONA</p>
-                <p className="text-sm font-semibold text-slate-200 mt-1 font-mono">{f.persona || 'None'}</p>
-              </div>
-              <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 col-span-2">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">PUBLISHED</p>
-                <p className="text-sm font-semibold text-slate-200 mt-1">{f.date || 'N/A'}</p>
-              </div>
+              {Object.entries(row)
+                .filter(([k, v]) => {
+                  const keyLower = k.toLowerCase();
+                  const skipKeys = new Set([
+                    'title', 'signal_title', 'brief_title', 'name',
+                    'summary', 'brief_summary', 'description', 'content',
+                    'persona_guidance', 'guidance', 'recommendation',
+                    'url', 'link'
+                  ]);
+                  return !skipKeys.has(keyLower) && v !== undefined && v !== null && v.trim() !== '';
+                })
+                .map(([key, val]) => {
+                  const isLongVal = val.length > 40 || key.toLowerCase().includes('reason') || key.toLowerCase().includes('message') || key.toLowerCase().includes('error') || key.toLowerCase().includes('persona') || key.toLowerCase().includes('guidance');
+                  return (
+                    <div
+                      key={key}
+                      className={clsx(
+                        "bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3",
+                        isLongVal ? "col-span-2" : "col-span-1"
+                      )}
+                    >
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                        {key.replace(/_/g, ' ')}
+                      </p>
+                      <p className="text-sm font-semibold text-slate-200 mt-1 break-words">
+                        {val}
+                      </p>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
