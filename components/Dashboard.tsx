@@ -217,24 +217,13 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
           ) : <span />}
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleCopy}
-              className={clsx(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer',
-                copied
-                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                  : 'border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/20'
-              )}
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied' : 'Copy All'}
-            </button>
             {f.url && (
               <a
                 href={f.url} target="_blank" rel="noreferrer"
                 onClick={e => e.stopPropagation()}
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:text-indigo-400 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs font-semibold text-slate-400 hover:text-indigo-400 hover:border-indigo-500/25 transition-all cursor-pointer"
               >
+                <span>Link</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
