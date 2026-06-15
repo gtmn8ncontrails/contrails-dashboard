@@ -11,14 +11,16 @@ export default async function Home() {
     w2ErrorsData,
     approvedBriefsData,
     stage3QueueData,
-    rejectedSignalsData
+    rejectedSignalsData,
+    stage3OutputData
   ] = await Promise.all([
     getSheetData('Stage 1 Output!A:AZ'),
     getSheetData('w1 errors!A:AZ'),
     getSheetData('W2 Errors!A:AZ'),
     getSheetData('Approved Briefs!A:AZ'),
     getSheetData('Stage 3 Queue!A:AZ'),
-    getSheetData('Rejected Signals!A:AZ')
+    getSheetData('Rejected Signals!A:AZ'),
+    getSheetData('Stage 3 Output!A:AZ')
   ]);
 
   return (
@@ -29,7 +31,8 @@ export default async function Home() {
         w2Errors: w2ErrorsData,
         approvedBriefs: approvedBriefsData,
         stage3Queue: stage3QueueData,
-        rejectedSignals: rejectedSignalsData
+        rejectedSignals: rejectedSignalsData,
+        stage3Output: stage3OutputData
       }}
     />
   );

@@ -10,6 +10,8 @@ const SHEET_GIDS: Record<string, string> = {
   'Approved Briefs': '0',
   'Stage 3 Queue': '1700518240',
   'Rejected Signals': '2062199386',
+  'Stage 3 Output': '115994473',
+  'Stage 3 Output ': '115994473',
 };
 
 async function getAuth() {

@@ -4,11 +4,11 @@ import { useState, useMemo } from 'react';
 import {
   Database, AlertCircle, CheckCircle, XCircle, Play,
   ChevronRight, LayoutDashboard, Globe, Calendar,
-  Search, X, Copy, Check, ExternalLink, Activity, FileText, ListTodo, RotateCw
+  Search, X, Copy, Check, ExternalLink, Activity, FileText, ListTodo, RotateCw, FileCheck
 } from 'lucide-react';
 import clsx from 'clsx';
 
-type TabType = 'overview' | 'signals' | 'briefs' | 'queue' | 'run';
+type TabType = 'overview' | 'finalAssets' | 'signals' | 'briefs' | 'queue' | 'run';
 type SignalSubTab = 'live' | 'errors' | 'rejected';
 type QueueSubTab = 'queue' | 'w2Errors';
 
@@ -489,16 +489,18 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   };
 
   const navItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'signals',  label: 'Signals',  icon: Activity },
-    { id: 'briefs',   label: 'Briefs',   icon: FileText },
-    { id: 'queue',    label: 'Queue',    icon: ListTodo },
-    { id: 'run',      label: 'Run',      icon: Play },
+    { id: 'overview',    label: 'Overview',     icon: LayoutDashboard },
+    { id: 'finalAssets', label: 'Final Assets', icon: FileCheck },
+    { id: 'signals',     label: 'Signals',      icon: Activity },
+    { id: 'briefs',      label: 'Briefs',       icon: FileText },
+    { id: 'queue',       label: 'Queue',        icon: ListTodo },
+    { id: 'run',         label: 'Run',          icon: Play },
   ] as const;
 
   // Compute active data set based on active tab and sub-tab selection
   const activeData: Record<string, string>[] = useMemo(() => {
     if (activeTab === 'briefs') return initialData?.approvedBriefs || [];
+    if (activeTab === 'finalAssets') return initialData?.stage3Output || [];
     if (activeTab === 'signals') {
       if (signalSub === 'errors') return initialData?.errors || [];
       if (signalSub === 'rejected') return initialData?.rejectedSignals || [];
@@ -644,7 +646,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
           </div>
         )}
 
-        {(activeTab === 'signals' || activeTab === 'briefs' || activeTab === 'queue') && (
+        {(activeTab === 'signals' || activeTab === 'briefs' || activeTab === 'queue' || activeTab === 'finalAssets') && (
           <div className="animate-fade-in">
             <CardGrid data={activeData} relevanceMap={relevanceMap} />
           </div>
