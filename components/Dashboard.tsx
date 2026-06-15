@@ -100,15 +100,13 @@ const ThreeDotsMenu = ({
 
 // ── SIGNAL CARD ───────────────────────────────────────────────────────────────
 const SignalCard = ({
-  row, index, onClick, relevanceMap, onDelete, isDeleted, onRestore,
+  row, index, onClick, relevanceMap, isDeleted,
 }: {
   row: Record<string, string>;
   index: number;
   onClick: (row: Record<string, string>) => void;
   relevanceMap?: Map<string, string>;
-  onDelete?: (row: Record<string, string>) => void;
   isDeleted?: boolean;
-  onRestore?: (row: Record<string, string>) => void;
 }) => {
   const f = getCardFields(row, relevanceMap);
   const displayTitle = f.title || `Entry ${index + 1}`;
@@ -129,7 +127,7 @@ const SignalCard = ({
           : "border-white/[0.04] bg-[#0c0d1e]/40 hover:bg-[#0c0d1e]/80 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/5"
       )}
     >
-      {/* Top: badges + score + three-dot */}
+      {/* Top: badges + score */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           {f.urgency && (
@@ -152,16 +150,6 @@ const SignalCard = ({
           <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-bold font-mono">
             {f.relevanceScore || '-'}
           </div>
-          {/* Three-dot menu */}
-          <ThreeDotsMenu
-            onAction={() => isDeleted ? onRestore?.(row) : onDelete?.(row)}
-            actionLabel={isDeleted ? 'Restore' : 'Delete'}
-            actionIcon={isDeleted ? RefreshCcw : Trash2}
-            actionClass={isDeleted
-              ? 'text-emerald-400 hover:bg-emerald-500/10'
-              : 'text-red-400 hover:bg-red-500/10'
-            }
-          />
         </div>
       </div>
 
@@ -247,7 +235,24 @@ const DetailBox = ({ label, value, isLong }: { label: string; value: string; isL
 };
 
 // ── DETAIL MODAL ──────────────────────────────────────────────────────────────
-const DetailModal = ({ row, onClose, relevanceMap, advanced }: { row: Record<string, string>; onClose: () => void; relevanceMap?: Map<string, string>; advanced: boolean }) => {
+// ── DETAIL MODAL ──────────────────────────────────────────────────────────────
+const DetailModal = ({
+  row,
+  onClose,
+  relevanceMap,
+  advanced,
+  onDelete,
+  onRestore,
+  isDeleted,
+}: {
+  row: Record<string, string>;
+  onClose: () => void;
+  relevanceMap?: Map<string, string>;
+  advanced: boolean;
+  onDelete?: (row: Record<string, string>) => void;
+  onRestore?: (row: Record<string, string>) => void;
+  isDeleted?: boolean;
+}) => {
   const f = getCardFields(row, relevanceMap);
   const [copied, setCopied] = useState(false);
 
@@ -298,6 +303,24 @@ const DetailModal = ({ row, onClose, relevanceMap, advanced }: { row: Record<str
           ) : <span />}
 
           <div className="flex items-center gap-2">
+            {(onDelete || onRestore) && (
+              <ThreeDotsMenu
+                onAction={() => {
+                  if (isDeleted) {
+                    onRestore?.(row);
+                  } else {
+                    onDelete?.(row);
+                  }
+                  onClose();
+                }}
+                actionLabel={isDeleted ? 'Restore' : 'Delete'}
+                actionIcon={isDeleted ? RefreshCcw : Trash2}
+                actionClass={isDeleted
+                  ? 'text-emerald-400 hover:bg-emerald-500/10'
+                  : 'text-red-400 hover:bg-red-500/10'
+                }
+              />
+            )}
             {f.url && (
               <a
                 href={f.url} target="_blank" rel="noreferrer"
@@ -358,14 +381,6 @@ const DetailModal = ({ row, onClose, relevanceMap, advanced }: { row: Record<str
             <div className="grid grid-cols-2 gap-2.5">
               {!advanced ? (
                 <>
-                  {f.url && (
-                    <DetailBox
-                      key="url"
-                      label="url"
-                      value={f.url}
-                      isLong={true}
-                    />
-                  )}
                   {(row.urgent_pain_point || row.urgent_pain_points) && (
                     <DetailBox
                       key="urgent_pain_point"
@@ -556,7 +571,17 @@ const CardGrid = ({
       </div>
 
       {/* Detail modal */}
-      {selected && <DetailModal row={selected} onClose={() => setSelected(null)} relevanceMap={relevanceMap} advanced={advanced} />}
+      {selected && (
+        <DetailModal
+          row={selected}
+          onClose={() => setSelected(null)}
+          relevanceMap={relevanceMap}
+          advanced={advanced}
+          onDelete={onDelete}
+          onRestore={onRestore}
+          isDeleted={isDeletedView}
+        />
+      )}
     </div>
   );
 };
@@ -568,6 +593,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   const [queueSub, setQueueSub] = useState<QueueSubTab>('queue');
   const [runningStage, setRunningStage] = useState<number | null>(null);
   const [advanced, setAdvanced] = useState(false);
+  const [selectedDeleted, setSelectedDeleted] = useState<DeletedEntry | null>(null);
 
   // Local mutable data state – initialized from server data, updated on delete/restore
   const [localStage1, setLocalStage1] = useState<Record<string, string>[]>([]);
@@ -862,10 +888,9 @@ export default function Dashboard({ initialData }: { initialData: any }) {
                     key={i}
                     row={entry.row}
                     index={i}
-                    onClick={() => {}}
+                    onClick={() => setSelectedDeleted(entry)}
                     relevanceMap={relevanceMap}
                     isDeleted={true}
-                    onRestore={() => handleRestore(entry)}
                   />
                 ))}
               </div>
@@ -885,6 +910,17 @@ export default function Dashboard({ initialData }: { initialData: any }) {
           </div>
         )}
 
+        {selectedDeleted && (
+          <DetailModal
+            row={selectedDeleted.row}
+            onClose={() => setSelectedDeleted(null)}
+            relevanceMap={relevanceMap}
+            advanced={advanced}
+            onRestore={() => handleRestore(selectedDeleted)}
+            isDeleted={true}
+          />
+        )}
+
       </main>
 
       {/* Sticky Bottom Tab Bar Navigation */}
@@ -894,7 +930,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             // Show badge on Queue tab if there are deleted entries
-            const showBadge = item.id === 'queue' && deletedEntries.length > 0;
+            const showBadge = false;
             return (
               <button
                 key={item.id}
