@@ -250,6 +250,7 @@ const DetailBox = ({ label, value, isLong }: { label: string; value: string; isL
 const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, string>; onClose: () => void; relevanceMap?: Map<string, string> }) => {
   const f = getCardFields(row, relevanceMap);
   const [copied, setCopied] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
 
   const handleCopy = async () => {
     const text = Object.entries(row).map(([k, v]) => `${k}: ${v}`).join('\n');
@@ -297,7 +298,26 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
             </span>
           ) : <span />}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {/* Advanced toggle */}
+            <div className="flex items-center gap-2 select-none">
+              <span className="text-xs font-semibold text-slate-400">Advanced</span>
+              <button
+                onClick={() => setAdvanced(!advanced)}
+                className={clsx(
+                  "relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer focus:outline-none",
+                  advanced ? "bg-indigo-500" : "bg-white/10"
+                )}
+              >
+                <span
+                  className={clsx(
+                    "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-200 ease-in-out",
+                    advanced ? "translate-x-[18px]" : "translate-x-[2px]"
+                  )}
+                />
+              </button>
+            </div>
+
             {f.url && (
               <a
                 href={f.url} target="_blank" rel="noreferrer"
@@ -356,28 +376,42 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
           <div className="space-y-2.5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/80 mb-2 select-none">SIGNAL DETAILS</p>
             <div className="grid grid-cols-2 gap-2.5">
-              {Object.entries(row)
-                .filter(([k, v]) => {
-                  const keyLower = k.toLowerCase();
-                  const skipKeys = new Set([
-                    'title', 'signal_title', 'brief_title', 'name',
-                    'summary', 'brief_summary', 'description', 'content',
-                    'persona_guidance', 'guidance', 'recommendation',
-                    'url', 'link'
-                  ]);
-                  return !skipKeys.has(keyLower) && v !== undefined && v !== null && v.trim() !== '';
-                })
-                .map(([key, val]) => {
-                  const isLongVal = val.length > 40 || key.toLowerCase().includes('reason') || key.toLowerCase().includes('message') || key.toLowerCase().includes('error') || key.toLowerCase().includes('persona') || key.toLowerCase().includes('guidance');
-                  return (
+              {!advanced ? (
+                <>
+                  {f.url && (
                     <DetailBox
-                      key={key}
-                      label={key.replace(/_/g, ' ')}
-                      value={val}
-                      isLong={isLongVal}
+                      key="url"
+                      label="url"
+                      value={f.url}
+                      isLong={true}
                     />
-                  );
-                })}
+                  )}
+                  {(row.urgent_pain_point || row.urgent_pain_points) && (
+                    <DetailBox
+                      key="urgent_pain_point"
+                      label="urgent pain point"
+                      value={row.urgent_pain_point || row.urgent_pain_points || ''}
+                      isLong={true}
+                    />
+                  )}
+                </>
+              ) : (
+                Object.entries(row)
+                  .filter(([k, v]) => {
+                    return v !== undefined && v !== null && v.trim() !== '';
+                  })
+                  .map(([key, val]) => {
+                    const isLongVal = val.length > 40 || key.toLowerCase().includes('reason') || key.toLowerCase().includes('message') || key.toLowerCase().includes('error') || key.toLowerCase().includes('persona') || key.toLowerCase().includes('guidance') || key.toLowerCase().includes('pain') || key.toLowerCase().includes('url');
+                    return (
+                      <DetailBox
+                        key={key}
+                        label={key.replace(/_/g, ' ')}
+                        value={val}
+                        isLong={isLongVal}
+                      />
+                    );
+                  })
+              )}
             </div>
           </div>
         </div>
