@@ -558,8 +558,6 @@ const CardGrid = ({
             index={i}
             onClick={setSelected}
             relevanceMap={relevanceMap}
-            onDelete={onDelete}
-            onRestore={onRestore}
             isDeleted={isDeletedView}
           />
         ))}
