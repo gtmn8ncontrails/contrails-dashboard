@@ -247,10 +247,9 @@ const DetailBox = ({ label, value, isLong }: { label: string; value: string; isL
 };
 
 // ── DETAIL MODAL ──────────────────────────────────────────────────────────────
-const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, string>; onClose: () => void; relevanceMap?: Map<string, string> }) => {
+const DetailModal = ({ row, onClose, relevanceMap, advanced }: { row: Record<string, string>; onClose: () => void; relevanceMap?: Map<string, string>; advanced: boolean }) => {
   const f = getCardFields(row, relevanceMap);
   const [copied, setCopied] = useState(false);
-  const [advanced, setAdvanced] = useState(false);
 
   const handleCopy = async () => {
     const text = Object.entries(row).map(([k, v]) => `${k}: ${v}`).join('\n');
@@ -298,26 +297,7 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
             </span>
           ) : <span />}
 
-          <div className="flex items-center gap-4">
-            {/* Advanced toggle */}
-            <div className="flex items-center gap-2 select-none">
-              <span className="text-xs font-semibold text-slate-400">Advanced</span>
-              <button
-                onClick={() => setAdvanced(!advanced)}
-                className={clsx(
-                  "relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer focus:outline-none",
-                  advanced ? "bg-indigo-500" : "bg-white/10"
-                )}
-              >
-                <span
-                  className={clsx(
-                    "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-200 ease-in-out",
-                    advanced ? "translate-x-[18px]" : "translate-x-[2px]"
-                  )}
-                />
-              </button>
-            </div>
-
+          <div className="flex items-center gap-2">
             {f.url && (
               <a
                 href={f.url} target="_blank" rel="noreferrer"
@@ -427,12 +407,14 @@ const CardGrid = ({
   onDelete,
   isDeletedView,
   onRestore,
+  advanced,
 }: {
   data: Record<string, string>[];
   relevanceMap?: Map<string, string>;
   onDelete?: (row: Record<string, string>) => void;
   isDeletedView?: boolean;
   onRestore?: (row: Record<string, string>) => void;
+  advanced: boolean;
 }) => {
   const [search, setSearch] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
@@ -574,7 +556,7 @@ const CardGrid = ({
       </div>
 
       {/* Detail modal */}
-      {selected && <DetailModal row={selected} onClose={() => setSelected(null)} relevanceMap={relevanceMap} />}
+      {selected && <DetailModal row={selected} onClose={() => setSelected(null)} relevanceMap={relevanceMap} advanced={advanced} />}
     </div>
   );
 };
@@ -585,6 +567,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
   const [queueSub, setQueueSub] = useState<QueueSubTab>('queue');
   const [runningStage, setRunningStage] = useState<number | null>(null);
+  const [advanced, setAdvanced] = useState(false);
 
   // Local mutable data state – initialized from server data, updated on delete/restore
   const [localStage1, setLocalStage1] = useState<Record<string, string>[]>([]);
@@ -721,7 +704,26 @@ export default function Dashboard({ initialData }: { initialData: any }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          {/* Advanced toggle */}
+          <div className="flex items-center gap-2 select-none">
+            <span className="text-xs font-semibold text-slate-400">Advanced</span>
+            <button
+              onClick={() => setAdvanced(!advanced)}
+              className={clsx(
+                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer focus:outline-none",
+                advanced ? "bg-indigo-500" : "bg-white/10"
+              )}
+            >
+              <span
+                className={clsx(
+                  "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-200 ease-in-out",
+                  advanced ? "translate-x-[18px]" : "translate-x-[2px]"
+                )}
+              />
+            </button>
+          </div>
+
           <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Active
@@ -878,6 +880,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
               data={activeConfig.data}
               relevanceMap={relevanceMap}
               onDelete={(row) => handleDelete(row, activeConfig.sourceKey, activeConfig.setter)}
+              advanced={advanced}
             />
           </div>
         )}
