@@ -1,16 +1,24 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Database, AlertCircle, CheckCircle, XCircle, Play,
   ChevronRight, LayoutDashboard, Globe, Calendar,
-  Search, X, Copy, Check, ExternalLink, Activity, FileText, ListTodo, RotateCw, FileCheck
+  Search, X, Copy, Check, ExternalLink, Activity, FileText, ListTodo, RotateCw, FileCheck,
+  MoreHorizontal, Trash2, RefreshCcw
 } from 'lucide-react';
 import clsx from 'clsx';
 
 type TabType = 'overview' | 'finalAssets' | 'signals' | 'briefs' | 'queue' | 'run';
 type SignalSubTab = 'live' | 'errors' | 'rejected';
-type QueueSubTab = 'queue' | 'w2Errors';
+type QueueSubTab = 'recentlyDeleted' | 'queue' | 'w2Errors';
+
+// Each deleted entry tracks which "bucket" it came from so we can restore it
+type DeletedEntry = {
+  row: Record<string, string>;
+  sourceKey: 'stage1' | 'approvedBriefs' | 'stage3Queue' | 'stage3Output' | 'rejectedSignals' | 'errors' | 'w2Errors';
+  deletedAt: number;
+};
 
 // ── FIELD EXTRACTOR ───────────────────────────────────────────────────────────
 function getCardFields(row: Record<string, string>, relevanceMap?: Map<string, string>) {
@@ -40,14 +48,67 @@ function getCardFields(row: Record<string, string>, relevanceMap?: Map<string, s
   };
 }
 
+// ── THREE-DOT MENU ─────────────────────────────────────────────────────────────
+const ThreeDotsMenu = ({
+  onAction,
+  actionLabel,
+  actionIcon: ActionIcon,
+  actionClass,
+}: {
+  onAction: () => void;
+  actionLabel: string;
+  actionIcon: React.ElementType;
+  actionClass: string;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative" onClick={e => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center justify-center w-7 h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] text-slate-500 hover:text-slate-200 hover:border-white/20 hover:bg-white/[0.06] transition-all cursor-pointer"
+        title="More options"
+      >
+        <MoreHorizontal className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-9 z-50 min-w-[130px] bg-[#111226] border border-white/[0.1] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden py-1">
+          <button
+            onClick={() => { onAction(); setOpen(false); }}
+            className={clsx(
+              'w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold transition-all cursor-pointer',
+              actionClass
+            )}
+          >
+            <ActionIcon className="w-3.5 h-3.5 flex-shrink-0" />
+            {actionLabel}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── SIGNAL CARD ───────────────────────────────────────────────────────────────
 const SignalCard = ({
-  row, index, onClick, relevanceMap,
+  row, index, onClick, relevanceMap, onDelete, isDeleted, onRestore,
 }: {
   row: Record<string, string>;
   index: number;
   onClick: (row: Record<string, string>) => void;
   relevanceMap?: Map<string, string>;
+  onDelete?: (row: Record<string, string>) => void;
+  isDeleted?: boolean;
+  onRestore?: (row: Record<string, string>) => void;
 }) => {
   const f = getCardFields(row, relevanceMap);
   const displayTitle = f.title || `Entry ${index + 1}`;
@@ -61,9 +122,14 @@ const SignalCard = ({
   return (
     <div
       onClick={() => onClick(row)}
-      className="group flex flex-col gap-3.5 p-5 rounded-2xl border border-white/[0.04] bg-[#0c0d1e]/40 hover:bg-[#0c0d1e]/80 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/5 cursor-pointer transition-all duration-200"
+      className={clsx(
+        "group flex flex-col gap-3.5 p-5 rounded-2xl border cursor-pointer transition-all duration-200",
+        isDeleted
+          ? "border-white/[0.04] bg-red-900/5 hover:bg-red-900/10 hover:border-red-500/20 opacity-75"
+          : "border-white/[0.04] bg-[#0c0d1e]/40 hover:bg-[#0c0d1e]/80 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/5"
+      )}
     >
-      {/* Top: badges + score */}
+      {/* Top: badges + score + three-dot */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           {f.urgency && (
@@ -76,11 +142,26 @@ const SignalCard = ({
               {f.sourceType.replace(/_/g, ' ')}
             </span>
           )}
+          {isDeleted && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border border-red-400/20 bg-red-400/5 text-red-300">
+              Deleted
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-xs font-bold font-mono">
             {f.relevanceScore || '-'}
           </div>
+          {/* Three-dot menu */}
+          <ThreeDotsMenu
+            onAction={() => isDeleted ? onRestore?.(row) : onDelete?.(row)}
+            actionLabel={isDeleted ? 'Restore' : 'Delete'}
+            actionIcon={isDeleted ? RefreshCcw : Trash2}
+            actionClass={isDeleted
+              ? 'text-emerald-400 hover:bg-emerald-500/10'
+              : 'text-red-400 hover:bg-red-500/10'
+            }
+          />
         </div>
       </div>
 
@@ -306,7 +387,19 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
 };
 
 // ── CARD GRID (search + filter + cards) ──────────────────────────────────────
-const CardGrid = ({ data, relevanceMap }: { data: Record<string, string>[]; relevanceMap?: Map<string, string> }) => {
+const CardGrid = ({
+  data,
+  relevanceMap,
+  onDelete,
+  isDeletedView,
+  onRestore,
+}: {
+  data: Record<string, string>[];
+  relevanceMap?: Map<string, string>;
+  onDelete?: (row: Record<string, string>) => void;
+  isDeletedView?: boolean;
+  onRestore?: (row: Record<string, string>) => void;
+}) => {
   const [search, setSearch] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -423,16 +516,25 @@ const CardGrid = ({ data, relevanceMap }: { data: Record<string, string>[]; rele
       </div>
 
       {/* Result count */}
-      <p className="text-xs text-slate-500 mt-1 font-medium">{filtered.length} of {data.length} signals</p>
+      <p className="text-xs text-slate-500 mt-1 font-medium">{filtered.length} of {data.length} {isDeletedView ? 'deleted entries' : 'signals'}</p>
 
       {/* 2-column card grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 pb-24">
         {filtered.map((row, i) => (
-          <SignalCard key={i} row={row} index={i} onClick={setSelected} relevanceMap={relevanceMap} />
+          <SignalCard
+            key={i}
+            row={row}
+            index={i}
+            onClick={setSelected}
+            relevanceMap={relevanceMap}
+            onDelete={onDelete}
+            onRestore={onRestore}
+            isDeleted={isDeletedView}
+          />
         ))}
         {filtered.length === 0 && (
           <div className="col-span-2 text-center py-20 text-slate-500 text-sm">
-            No signals match your filters.
+            {isDeletedView ? 'No recently deleted entries.' : 'No signals match your filters.'}
           </div>
         )}
       </div>
@@ -450,22 +552,67 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   const [queueSub, setQueueSub] = useState<QueueSubTab>('queue');
   const [runningStage, setRunningStage] = useState<number | null>(null);
 
+  // Local mutable data state – initialized from server data, updated on delete/restore
+  const [localStage1, setLocalStage1] = useState<Record<string, string>[]>([]);
+  const [localApprovedBriefs, setLocalApprovedBriefs] = useState<Record<string, string>[]>([]);
+  const [localStage3Queue, setLocalStage3Queue] = useState<Record<string, string>[]>([]);
+  const [localStage3Output, setLocalStage3Output] = useState<Record<string, string>[]>([]);
+  const [localRejectedSignals, setLocalRejectedSignals] = useState<Record<string, string>[]>([]);
+  const [localErrors, setLocalErrors] = useState<Record<string, string>[]>([]);
+  const [localW2Errors, setLocalW2Errors] = useState<Record<string, string>[]>([]);
+  const [deletedEntries, setDeletedEntries] = useState<DeletedEntry[]>([]);
+
+  useEffect(() => {
+    setLocalStage1(initialData?.stage1 || []);
+    setLocalApprovedBriefs(initialData?.approvedBriefs || []);
+    setLocalStage3Queue(initialData?.stage3Queue || []);
+    setLocalStage3Output(initialData?.stage3Output || []);
+    setLocalRejectedSignals(initialData?.rejectedSignals || []);
+    setLocalErrors(initialData?.errors || []);
+    setLocalW2Errors(initialData?.w2Errors || []);
+  }, [initialData]);
+
   const relevanceMap = useMemo(() => {
     const map = new Map<string, string>();
-    initialData?.stage1?.forEach((r: any) => {
+    localStage1.forEach((r: any) => {
       const title = r.title || r.signal_title || '';
       if (title && r.relevance_score) {
         map.set(title.toLowerCase().trim(), String(r.relevance_score));
       }
     });
-    initialData?.approvedBriefs?.forEach((r: any) => {
+    localApprovedBriefs.forEach((r: any) => {
       const title = r.title || r.signal_title || '';
       if (title && r.relevance_score) {
         map.set(title.toLowerCase().trim(), String(r.relevance_score));
       }
     });
     return map;
-  }, [initialData]);
+  }, [localStage1, localApprovedBriefs]);
+
+  // Delete an entry from its source list and add to recently deleted
+  const handleDelete = (
+    row: Record<string, string>,
+    sourceKey: DeletedEntry['sourceKey'],
+    setSource: React.Dispatch<React.SetStateAction<Record<string, string>[]>>
+  ) => {
+    setSource(prev => prev.filter(r => r !== row));
+    setDeletedEntries(prev => [{ row, sourceKey, deletedAt: Date.now() }, ...prev]);
+  };
+
+  // Restore from recently deleted back to its source list
+  const handleRestore = (entry: DeletedEntry) => {
+    setDeletedEntries(prev => prev.filter(e => e !== entry));
+    const setterMap: Record<DeletedEntry['sourceKey'], React.Dispatch<React.SetStateAction<Record<string, string>[]>>> = {
+      stage1: setLocalStage1,
+      approvedBriefs: setLocalApprovedBriefs,
+      stage3Queue: setLocalStage3Queue,
+      stage3Output: setLocalStage3Output,
+      rejectedSignals: setLocalRejectedSignals,
+      errors: setLocalErrors,
+      w2Errors: setLocalW2Errors,
+    };
+    setterMap[entry.sourceKey](prev => [entry.row, ...prev]);
+  };
 
   const triggerWorkflow = async (stage: number) => {
     setRunningStage(stage);
@@ -497,21 +644,34 @@ export default function Dashboard({ initialData }: { initialData: any }) {
     { id: 'run',         label: 'Run',          icon: Play },
   ] as const;
 
-  // Compute active data set based on active tab and sub-tab selection
-  const activeData: Record<string, string>[] = useMemo(() => {
-    if (activeTab === 'briefs') return initialData?.approvedBriefs || [];
-    if (activeTab === 'finalAssets') return initialData?.stage3Output || [];
+  // Determine the active data and corresponding delete handler
+  type ActiveDataConfig = {
+    data: Record<string, string>[];
+    sourceKey: DeletedEntry['sourceKey'];
+    setter: React.Dispatch<React.SetStateAction<Record<string, string>[]>>;
+  };
+
+  const activeConfig: ActiveDataConfig | null = useMemo(() => {
+    if (activeTab === 'briefs') return { data: localApprovedBriefs, sourceKey: 'approvedBriefs', setter: setLocalApprovedBriefs };
+    if (activeTab === 'finalAssets') return { data: localStage3Output, sourceKey: 'stage3Output', setter: setLocalStage3Output };
     if (activeTab === 'signals') {
-      if (signalSub === 'errors') return initialData?.errors || [];
-      if (signalSub === 'rejected') return initialData?.rejectedSignals || [];
-      return initialData?.stage1 || [];
+      if (signalSub === 'errors') return { data: localErrors, sourceKey: 'errors', setter: setLocalErrors };
+      if (signalSub === 'rejected') return { data: localRejectedSignals, sourceKey: 'rejectedSignals', setter: setLocalRejectedSignals };
+      return { data: localStage1, sourceKey: 'stage1', setter: setLocalStage1 };
     }
     if (activeTab === 'queue') {
-      if (queueSub === 'w2Errors') return initialData?.w2Errors || [];
-      return initialData?.stage3Queue || [];
+      if (queueSub === 'recentlyDeleted') return null;
+      if (queueSub === 'w2Errors') return { data: localW2Errors, sourceKey: 'w2Errors', setter: setLocalW2Errors };
+      return { data: localStage3Queue, sourceKey: 'stage3Queue', setter: setLocalStage3Queue };
     }
-    return [];
-  }, [activeTab, signalSub, queueSub, initialData]);
+    return null;
+  }, [activeTab, signalSub, queueSub, localStage1, localApprovedBriefs, localStage3Queue, localStage3Output, localRejectedSignals, localErrors, localW2Errors]);
+
+  const showCardGrid =
+    activeTab === 'signals' ||
+    activeTab === 'briefs' ||
+    activeTab === 'finalAssets' ||
+    (activeTab === 'queue' && queueSub !== 'recentlyDeleted');
 
   return (
     <div className="min-h-screen bg-[#070711] text-[#e2e8f0] flex flex-col font-sans antialiased">
@@ -538,7 +698,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
       {/* Main Content Area */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 md:px-8 py-6">
         
-        {/* Sub-Tab Navigation for Signals/Queue */}
+        {/* Sub-Tab Navigation for Signals */}
         {activeTab === 'signals' && (
           <div className="flex border-b border-white/[0.04] mb-5">
             {[
@@ -562,9 +722,11 @@ export default function Dashboard({ initialData }: { initialData: any }) {
           </div>
         )}
 
+        {/* Sub-Tab Navigation for Queue – "Recently Deleted" is first */}
         {activeTab === 'queue' && (
           <div className="flex border-b border-white/[0.04] mb-5">
             {[
+              { id: 'recentlyDeleted', label: `Recently Deleted${deletedEntries.length > 0 ? ` (${deletedEntries.length})` : ''}` },
               { id: 'queue', label: 'Stage 3 Queue' },
               { id: 'w2Errors', label: 'W2 Errors' },
             ].map(sub => (
@@ -572,9 +734,11 @@ export default function Dashboard({ initialData }: { initialData: any }) {
                 key={sub.id}
                 onClick={() => setQueueSub(sub.id as QueueSubTab)}
                 className={clsx(
-                  'px-4 py-2 text-xs font-semibold border-b-2 -mb-[2px] transition-colors cursor-pointer',
+                  'px-4 py-2 text-xs font-semibold border-b-2 -mb-[2px] transition-colors cursor-pointer whitespace-nowrap',
                   queueSub === sub.id
-                    ? 'border-indigo-500 text-indigo-400'
+                    ? sub.id === 'recentlyDeleted'
+                      ? 'border-red-500 text-red-400'
+                      : 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-500 hover:text-slate-300'
                 )}
               >
@@ -590,10 +754,10 @@ export default function Dashboard({ initialData }: { initialData: any }) {
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Total Signals',   value: initialData.stage1?.length || 0,        color: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/5' },
-                { label: 'Approved Briefs', value: initialData.approvedBriefs?.length || 0, color: 'text-purple-400 border-purple-500/20 bg-purple-500/5' },
-                { label: 'Queue',           value: initialData.stage3Queue?.length || 0,    color: 'text-amber-400 border-amber-500/20 bg-amber-500/5' },
-                { label: 'Errors',          value: (initialData.errors?.length || 0) + (initialData.w2Errors?.length || 0), color: 'text-red-400 border-red-500/20 bg-red-500/5' },
+                { label: 'Total Signals',   value: localStage1.length,        color: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/5' },
+                { label: 'Approved Briefs', value: localApprovedBriefs.length, color: 'text-purple-400 border-purple-500/20 bg-purple-500/5' },
+                { label: 'Queue',           value: localStage3Queue.length,    color: 'text-amber-400 border-amber-500/20 bg-amber-500/5' },
+                { label: 'Errors',          value: localErrors.length + localW2Errors.length, color: 'text-red-400 border-red-500/20 bg-red-500/5' },
               ].map((s, i) => (
                 <div key={i} className={clsx('p-4 border rounded-2xl flex flex-col justify-between h-24', s.color)}>
                   <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{s.label}</span>
@@ -646,9 +810,41 @@ export default function Dashboard({ initialData }: { initialData: any }) {
           </div>
         )}
 
-        {(activeTab === 'signals' || activeTab === 'briefs' || activeTab === 'queue' || activeTab === 'finalAssets') && (
+        {/* Recently Deleted view */}
+        {activeTab === 'queue' && queueSub === 'recentlyDeleted' && (
           <div className="animate-fade-in">
-            <CardGrid data={activeData} relevanceMap={relevanceMap} />
+            {deletedEntries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-slate-500 gap-3">
+                <Trash2 className="w-8 h-8 opacity-30" />
+                <p className="text-sm font-medium">No recently deleted entries.</p>
+                <p className="text-xs opacity-60">Items you delete will appear here and can be restored.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 pb-24">
+                {deletedEntries.map((entry, i) => (
+                  <SignalCard
+                    key={i}
+                    row={entry.row}
+                    index={i}
+                    onClick={() => {}}
+                    relevanceMap={relevanceMap}
+                    isDeleted={true}
+                    onRestore={() => handleRestore(entry)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Regular card grid for signals, briefs, queue sub-tabs, finalAssets */}
+        {showCardGrid && activeConfig && (
+          <div className="animate-fade-in">
+            <CardGrid
+              data={activeConfig.data}
+              relevanceMap={relevanceMap}
+              onDelete={(row) => handleDelete(row, activeConfig.sourceKey, activeConfig.setter)}
+            />
           </div>
         )}
 
@@ -660,14 +856,21 @@ export default function Dashboard({ initialData }: { initialData: any }) {
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            // Show badge on Queue tab if there are deleted entries
+            const showBadge = item.id === 'queue' && deletedEntries.length > 0;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className="flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all cursor-pointer"
+                className="relative flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all cursor-pointer"
               >
                 <Icon className={clsx('w-5 h-5 transition-transform duration-200', isActive ? 'text-indigo-400 scale-110' : 'text-slate-500 hover:text-slate-300')} />
                 <span className={clsx('text-[9px] mt-1 font-semibold tracking-wider transition-colors', isActive ? 'text-indigo-400 font-bold' : 'text-slate-500')}>{item.label}</span>
+                {showBadge && (
+                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {deletedEntries.length > 9 ? '9+' : deletedEntries.length}
+                  </span>
+                )}
               </button>
             );
           })}
