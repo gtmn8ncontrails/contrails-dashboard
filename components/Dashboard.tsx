@@ -158,7 +158,7 @@ const DetailBox = ({ label, value, isLong }: { label: string; value: string; isL
       <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 pr-6 select-none">
         {label}
       </p>
-      <p className="text-sm font-semibold text-slate-200 mt-1 break-words pr-6">
+      <p className="text-sm font-semibold text-slate-200 mt-1 break-words pr-6 whitespace-pre-wrap">
         {value}
       </p>
     </div>
@@ -252,7 +252,7 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
                   className="opacity-0 group-hover/summary:opacity-100 transition-opacity"
                 />
               </div>
-              <p className="text-sm text-slate-300 leading-relaxed">{f.summary}</p>
+              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{f.summary}</p>
             </div>
           )}
 
@@ -266,7 +266,7 @@ const DetailModal = ({ row, onClose, relevanceMap }: { row: Record<string, strin
                   tooltip="Copy Guidance"
                   className="absolute top-2.5 right-2.5 opacity-0 group-hover/guidance-box:opacity-100 transition-opacity"
                 />
-                <p className="text-sm text-slate-200 leading-relaxed font-medium pr-6">{f.personaGuidance}</p>
+                <p className="text-sm text-slate-200 leading-relaxed font-medium pr-6 whitespace-pre-wrap">{f.personaGuidance}</p>
               </div>
             </div>
           )}
