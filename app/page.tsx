@@ -20,7 +20,7 @@ export default async function Home() {
     getSheetData('Approved Briefs!A:AZ'),
     getSheetData('Stage 3 Queue!A:AZ'),
     getSheetData('Rejected Signals!A:AZ'),
-    getSheetData('Stage 3 Output!A:AZ')
+    getSheetData('Stage 3 Output !A:AZ')
   ]);
 
   return (
