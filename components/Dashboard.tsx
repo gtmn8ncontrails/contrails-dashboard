@@ -296,7 +296,7 @@ const DetailModal = ({
   };
 
   const xPost = getRowValue(['x post', 'x_post', 'twitter post', 'twitter_post', 'x/twitter post']);
-  const linkedinPost = getRowValue(['linkedin post', 'linkedin_post']);
+  const linkedinPost = getRowValue(['linkedin post', 'linkedin_post', 'linkedin version', 'linkedin_version']);
   const whatsappMessage = getRowValue(['whatsapp message', 'whatsapp_message']);
   const linkedinDm = getRowValue(['linkedin dm', 'linkedin_dm']);
 
