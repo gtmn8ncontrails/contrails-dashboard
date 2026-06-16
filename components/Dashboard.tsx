@@ -284,6 +284,22 @@ const DetailModal = ({
     f.urgency === 'low'                           ? 'bg-emerald-400' :
     'bg-slate-400';
 
+  // Helper to retrieve row values case-insensitively with underscores/spaces normalized
+  const getRowValue = (keys: string[]) => {
+    for (const [k, v] of Object.entries(row)) {
+      const norm = k.toLowerCase().replace(/_/g, ' ').trim();
+      if (keys.includes(norm)) {
+        return v;
+      }
+    }
+    return '';
+  };
+
+  const xPost = getRowValue(['x post', 'x_post', 'twitter post', 'twitter_post', 'x/twitter post']);
+  const linkedinPost = getRowValue(['linkedin post', 'linkedin_post']);
+  const whatsappMessage = getRowValue(['whatsapp message', 'whatsapp_message']);
+  const linkedinDm = getRowValue(['linkedin dm', 'linkedin_dm']);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
@@ -381,11 +397,35 @@ const DetailModal = ({
             <div className="grid grid-cols-2 gap-2.5">
               {!advanced ? (
                 <>
-                  {(row.urgent_pain_point || row.urgent_pain_points) && (
+                  {xPost && (
                     <DetailBox
-                      key="urgent_pain_point"
-                      label="urgent pain point"
-                      value={row.urgent_pain_point || row.urgent_pain_points || ''}
+                      key="x_post"
+                      label="x post"
+                      value={xPost}
+                      isLong={true}
+                    />
+                  )}
+                  {linkedinPost && (
+                    <DetailBox
+                      key="linkedin_post"
+                      label="linkedin post"
+                      value={linkedinPost}
+                      isLong={true}
+                    />
+                  )}
+                  {whatsappMessage && (
+                    <DetailBox
+                      key="whatsapp_message"
+                      label="whatsapp message"
+                      value={whatsappMessage}
+                      isLong={true}
+                    />
+                  )}
+                  {linkedinDm && (
+                    <DetailBox
+                      key="linkedin_dm"
+                      label="linkedin dm"
+                      value={linkedinDm}
                       isLong={true}
                     />
                   )}
