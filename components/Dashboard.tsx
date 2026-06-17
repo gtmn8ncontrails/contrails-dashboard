@@ -877,35 +877,33 @@ export default function Dashboard({ initialData }: { initialData: any }) {
         )}
 
         {activeTab === 'run' && (
-          <div className="space-y-5 pb-20 animate-fade-in">
-            <h2 className="text-base font-bold text-white mb-4">Run Pipelines & Workflows</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[1, 2, 3].map(stage => (
-                <div key={stage} className="flex flex-col border border-white/[0.06] bg-[#0c0d1e]/40 p-5 rounded-2xl">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center mb-4 text-indigo-400 font-bold text-sm">
-                    {stage}
-                  </div>
-                  <h4 className="font-bold text-sm mb-1 text-white">Stage {stage}</h4>
-                  <p className="text-xs text-slate-500 mb-6 h-8">
-                    {stage === 1 ? 'Scrape signals & papers' : stage === 2 ? 'Generate briefs & score' : 'Create narratives & posts'}
-                  </p>
-                  <button
-                    onClick={() => triggerWorkflow(stage)}
-                    disabled={runningStage !== null}
-                    className={clsx(
-                      'w-full py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer',
-                      runningStage === stage
-                        ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
-                        : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.3)]'
-                    )}
-                  >
-                    {runningStage === stage
-                      ? <span className="flex items-center gap-2"><span className="animate-spin">⍥</span> Running...</span>
-                      : <>Run Workflow <ChevronRight className="w-3.5 h-3.5" /></>
-                    }
-                  </button>
-                </div>
-              ))}
+          <div className="flex items-center justify-center min-h-[60vh] pb-20 animate-fade-in">
+            <div className="w-full max-w-md border border-white/[0.06] bg-gradient-to-br from-[#0c0d1e]/80 to-[#111230]/60 p-8 rounded-3xl shadow-[0_8px_40px_rgba(99,102,241,0.08)] backdrop-blur-sm">
+              {/* Icon */}
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/15 border border-indigo-500/25 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
+                <Play className="w-6 h-6 text-indigo-400" />
+              </div>
+
+              <h2 className="text-lg font-bold text-white mb-2 tracking-tight">Execute Workflow</h2>
+              <p className="text-sm text-slate-400 leading-relaxed mb-8">
+                Scrape the latest signals, research papers, and competitor updates. Results will be processed and appear in your dashboard.
+              </p>
+
+              <button
+                onClick={() => triggerWorkflow(1)}
+                disabled={runningStage !== null}
+                className={clsx(
+                  'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer',
+                  runningStage === 1
+                    ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]'
+                    : 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 shadow-[0_4px_20px_rgba(99,102,241,0.35)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.5)]'
+                )}
+              >
+                {runningStage === 1
+                  ? <span className="flex items-center gap-2"><span className="animate-spin">⍥</span> Running...</span>
+                  : <>Execute Workflow <ChevronRight className="w-4 h-4" /></>
+                }
+              </button>
             </div>
           </div>
         )}

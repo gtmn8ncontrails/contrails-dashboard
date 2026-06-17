@@ -1,17 +1,17 @@
 import { google } from 'googleapis';
 
-const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '1vmLWIGBC2ywUQrm2x8WCEDCaep2Jd6v0rM-ysFXBiEw';
+const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '1pogGjd0g5BlSENdMxa-1kL9lBFEwYf0sJn32ItfDckM';
 const TESTING_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_TESTING_SPREADSHEET_ID || '';
 
 const SHEET_GIDS: Record<string, string> = {
-  'Stage 1 Output': '514359377',
-  'w1 errors': '1543605888',
-  'W2 Errors': '19760547',
-  'Approved Briefs': '0',
-  'Stage 3 Queue': '1700518240',
-  'Rejected Signals': '2062199386',
-  'Stage 3 Output': '115994473',
-  'Stage 3 Output ': '115994473',
+  'Stage 1 Output': '0',
+  'w1 errors': '1930744049',
+  'W2 Errors': '1051520889',
+  'Approved Briefs': '1309776593',
+  'Stage 3 Queue': '161409036',
+  'Rejected Signals': '658557125',
+  'Stage 3 Output': '1790154594',
+  'Stage 3 Output ': '1790154594',
 };
 
 async function getAuth() {
