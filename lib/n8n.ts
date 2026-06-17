@@ -1,13 +1,21 @@
 const N8N_URL = process.env.N8N_BASE_URL;
 const API_KEY = process.env.N8N_API_KEY;
+const N8N_WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET;
 
 export async function triggerWorkflow(targetUrlOrId: string) {
   try {
     // If the user provided a full Webhook URL (Recommended by n8n)
     if (targetUrlOrId.startsWith('http')) {
+      console.log('Webhook secret length:', N8N_WEBHOOK_SECRET?.length);
+      console.log('Webhook secret value:', JSON.stringify(N8N_WEBHOOK_SECRET));
+
       const response = await fetch(targetUrlOrId, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${N8N_WEBHOOK_SECRET}`,
+        },
+        body: JSON.stringify({ triggeredAt: new Date().toISOString() }),
       });
       if (!response.ok) throw new Error(`n8n Webhook Error: ${response.status}`);
       return { success: true, data: await response.text() };
