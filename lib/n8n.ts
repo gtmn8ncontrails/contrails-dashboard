@@ -6,9 +6,6 @@ export async function triggerWorkflow(targetUrlOrId: string) {
   try {
     // If the user provided a full Webhook URL (Recommended by n8n)
     if (targetUrlOrId.startsWith('http')) {
-      console.log('Webhook secret length:', N8N_WEBHOOK_SECRET?.length);
-      console.log('Webhook secret value:', JSON.stringify(N8N_WEBHOOK_SECRET));
-
       const response = await fetch(targetUrlOrId, {
         method: 'POST',
         headers: {
