@@ -734,7 +734,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
 
   const activeConfig: ActiveDataConfig | null = useMemo(() => {
     if (activeTab === 'briefs') return { data: localApprovedBriefs, sourceKey: 'approvedBriefs', setter: setLocalApprovedBriefs };
-    if (activeTab === 'finalAssets') return { data: localStage3Output, sourceKey: 'stage3Output', setter: setLocalStage3Output };
+    if (activeTab === 'finalAssets') return { data: localStage3Queue, sourceKey: 'stage3Queue', setter: setLocalStage3Queue };
     if (activeTab === 'signals') {
       if (signalSub === 'errors') return { data: localErrors, sourceKey: 'errors', setter: setLocalErrors };
       if (signalSub === 'rejected') return { data: localRejectedSignals, sourceKey: 'rejectedSignals', setter: setLocalRejectedSignals };
