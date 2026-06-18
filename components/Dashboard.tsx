@@ -474,17 +474,35 @@ const CardGrid = ({
   const [search, setSearch] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [sortFilter, setSortFilter] = useState<'score' | 'recent'>('score');
   const [selected, setSelected] = useState<Record<string, string> | null>(null);
 
   const sorted = useMemo(() => {
-    return [...(data || [])].sort((a, b) => {
-      const scoreA = Number(a.relevance_score || 0);
-      const scoreB = Number(b.relevance_score || 0);
-      if (scoreA !== scoreB) return scoreB - scoreA;
-      const w = (u: string) => ({ high: 3, medium: 2, med: 2, low: 1 }[(u || '').toLowerCase()] || 0);
-      return w(b.urgency) - w(a.urgency);
+    const itemsWithMeta = [...(data || [])].map((row, idx) => {
+      const fields = getCardFields(row, relevanceMap);
+      return { row, idx, date: fields.date, score: Number(fields.relevanceScore || 0), urgency: fields.urgency };
     });
-  }, [data]);
+    
+    return itemsWithMeta.sort((a, b) => {
+      if (sortFilter === 'recent') {
+         const timeA = new Date(a.date).getTime();
+         const timeB = new Date(b.date).getTime();
+         
+         if (!isNaN(timeA) && !isNaN(timeB)) {
+             if (timeA !== timeB) return timeB - timeA;
+         } else if (a.date !== b.date) {
+             return b.date.localeCompare(a.date);
+         }
+         
+         if (a.score !== b.score) return b.score - a.score;
+         return b.idx - a.idx;
+      } else {
+         if (a.score !== b.score) return b.score - a.score;
+         const w = (u: string) => ({ high: 3, medium: 2, med: 2, low: 1 }[u] || 0);
+         return w(b.urgency) - w(a.urgency);
+      }
+    }).map(item => item.row);
+  }, [data, sortFilter, relevanceMap]);
 
   const filtered = useMemo(() => {
     let items = sorted;
@@ -542,6 +560,30 @@ const CardGrid = ({
             <X className="w-4 h-4" />
           </button>
         )}
+      </div>
+
+      {/* Sort pills */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {[
+          { value: 'score', label: 'Sort: Top Score' },
+          { value: 'recent', label: 'Sort: Most Recent' },
+        ].map(({ value, label }) => {
+          const isActive = sortFilter === value;
+          return (
+            <button
+              key={value}
+              onClick={() => setSortFilter(value as 'score' | 'recent')}
+              className={clsx(
+                'px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer',
+                isActive
+                  ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
+                  : 'border-white/5 bg-[#0f1023]/60 text-slate-400 hover:border-white/10 hover:text-slate-200'
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Urgency filter pills */}
@@ -834,15 +876,15 @@ export default function Dashboard({ initialData }: { initialData: any }) {
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-in pb-20">
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
               {[
                 { label: 'Total Signals',   value: localStage1.length,        color: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/5' },
                 { label: 'Final Briefs',    value: localStage3Queue.length,   color: 'text-purple-400 border-purple-500/20 bg-purple-500/5' },
                 { label: 'Errors',          value: localErrors.length + localW2Errors.length, color: 'text-red-400 border-red-500/20 bg-red-500/5' },
               ].map((s, i) => (
-                <div key={i} className={clsx('p-4 border rounded-2xl flex flex-col justify-between h-24', s.color)}>
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{s.label}</span>
-                  <span className="text-2xl font-bold font-mono">{s.value}</span>
+                <div key={i} className={clsx('p-3 border rounded-2xl flex flex-col justify-between h-20 md:h-24', s.color)}>
+                  <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider opacity-80 leading-tight">{s.label}</span>
+                  <span className="text-xl md:text-2xl font-bold font-mono">{s.value}</span>
                 </div>
               ))}
             </div>
