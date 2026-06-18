@@ -850,8 +850,8 @@ export default function Dashboard({ initialData }: { initialData: any }) {
             {/* Quick overview welcome */}
             <div className="border border-white/[0.04] bg-[#0c0d1e]/40 p-6 rounded-2xl">
               <h2 className="text-base font-bold text-white mb-2">Welcome to GTM Command Center</h2>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
-                This dashboard tracks inbound signals and scrapes relevant papers, triggers scoring algorithms, builds narratives, and posts them to your marketing queues.
+              <p className="text-xs text-slate-400 leading-relaxed max-w-3xl">
+                Automated competitive and regulatory intelligence for Contrails.ai. The pipeline scrapes competitor sites, academic research, and regulatory feeds, scores each signal for relevance and urgency, and turns the highest-priority ones into ready-to-use GTM assets — briefs, cold emails, and social content — queued for review.
               </p>
             </div>
           </div>
