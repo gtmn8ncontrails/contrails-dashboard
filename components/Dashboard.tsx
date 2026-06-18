@@ -834,11 +834,10 @@ export default function Dashboard({ initialData }: { initialData: any }) {
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-in pb-20">
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { label: 'Total Signals',   value: localStage1.length,        color: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/5' },
-                { label: 'Approved Briefs', value: localApprovedBriefs.length, color: 'text-purple-400 border-purple-500/20 bg-purple-500/5' },
-                { label: 'Queue',           value: localStage3Queue.length,    color: 'text-amber-400 border-amber-500/20 bg-amber-500/5' },
+                { label: 'Final Briefs',    value: localStage3Queue.length,   color: 'text-purple-400 border-purple-500/20 bg-purple-500/5' },
                 { label: 'Errors',          value: localErrors.length + localW2Errors.length, color: 'text-red-400 border-red-500/20 bg-red-500/5' },
               ].map((s, i) => (
                 <div key={i} className={clsx('p-4 border rounded-2xl flex flex-col justify-between h-24', s.color)}>
