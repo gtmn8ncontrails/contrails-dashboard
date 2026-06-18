@@ -11,7 +11,7 @@ import clsx from 'clsx';
 
 type TabType = 'overview' | 'finalAssets' | 'signals' | 'briefs' | 'queue' | 'run';
 type SignalSubTab = 'live' | 'errors' | 'rejected';
-type QueueSubTab = 'recentlyDeleted' | 'queue' | 'w2Errors';
+type QueueSubTab = 'recentlyDeleted' | 'w1Errors' | 'w2Errors' | 'rejectedSignals' | 'approvedBriefs';
 
 // Each deleted entry tracks which "bucket" it came from so we can restore it
 type DeletedEntry = {
@@ -628,7 +628,7 @@ const CardGrid = ({
 export default function Dashboard({ initialData }: { initialData: any }) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
-  const [queueSub, setQueueSub] = useState<QueueSubTab>('queue');
+  const [queueSub, setQueueSub] = useState<QueueSubTab>('recentlyDeleted');
   const [runningStage, setRunningStage] = useState<number | null>(null);
   const [advanced, setAdvanced] = useState(false);
   const [selectedDeleted, setSelectedDeleted] = useState<DeletedEntry | null>(null);
@@ -642,6 +642,13 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   const [localErrors, setLocalErrors] = useState<Record<string, string>[]>([]);
   const [localW2Errors, setLocalW2Errors] = useState<Record<string, string>[]>([]);
   const [deletedEntries, setDeletedEntries] = useState<DeletedEntry[]>([]);
+
+  // Reset queue sub-tab to recently deleted if advanced is toggled off
+  useEffect(() => {
+    if (!advanced && activeTab === 'queue' && queueSub !== 'recentlyDeleted') {
+      setQueueSub('recentlyDeleted');
+    }
+  }, [advanced, activeTab, queueSub]);
 
   useEffect(() => {
     setLocalStage1(initialData?.stage1 || []);
@@ -719,9 +726,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   const navItems = [
     { id: 'overview',    label: 'Overview',     icon: LayoutDashboard },
     { id: 'finalAssets', label: 'Final Assets', icon: FileCheck },
-    { id: 'signals',     label: 'Signals',      icon: Activity },
-    { id: 'briefs',      label: 'Briefs',       icon: FileText },
-    { id: 'queue',       label: 'Queue',        icon: ListTodo },
+    { id: 'queue',       label: 'Errors',       icon: AlertCircle },
     { id: 'run',         label: 'Run',          icon: Play },
   ] as const;
 
@@ -733,20 +738,17 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   };
 
   const activeConfig: ActiveDataConfig | null = useMemo(() => {
-    if (activeTab === 'briefs') return { data: localApprovedBriefs, sourceKey: 'approvedBriefs', setter: setLocalApprovedBriefs };
     if (activeTab === 'finalAssets') return { data: localStage3Queue, sourceKey: 'stage3Queue', setter: setLocalStage3Queue };
-    if (activeTab === 'signals') {
-      if (signalSub === 'errors') return { data: localErrors, sourceKey: 'errors', setter: setLocalErrors };
-      if (signalSub === 'rejected') return { data: localRejectedSignals, sourceKey: 'rejectedSignals', setter: setLocalRejectedSignals };
-      return { data: localStage1, sourceKey: 'stage1', setter: setLocalStage1 };
-    }
     if (activeTab === 'queue') {
       if (queueSub === 'recentlyDeleted') return null;
+      if (queueSub === 'w1Errors') return { data: localErrors, sourceKey: 'errors', setter: setLocalErrors };
       if (queueSub === 'w2Errors') return { data: localW2Errors, sourceKey: 'w2Errors', setter: setLocalW2Errors };
-      return { data: localStage3Queue, sourceKey: 'stage3Queue', setter: setLocalStage3Queue };
+      if (queueSub === 'rejectedSignals') return { data: localRejectedSignals, sourceKey: 'rejectedSignals', setter: setLocalRejectedSignals };
+      if (queueSub === 'approvedBriefs') return { data: localApprovedBriefs, sourceKey: 'approvedBriefs', setter: setLocalApprovedBriefs };
+      return { data: [], sourceKey: 'stage3Queue', setter: setLocalStage3Queue };
     }
     return null;
-  }, [activeTab, signalSub, queueSub, localStage1, localApprovedBriefs, localStage3Queue, localStage3Output, localRejectedSignals, localErrors, localW2Errors]);
+  }, [activeTab, queueSub, localStage3Queue, localErrors, localW2Errors, localRejectedSignals, localApprovedBriefs]);
 
   const showCardGrid =
     activeTab === 'signals' ||
@@ -798,38 +800,18 @@ export default function Dashboard({ initialData }: { initialData: any }) {
       {/* Main Content Area */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 md:px-8 py-6">
         
-        {/* Sub-Tab Navigation for Signals */}
-        {activeTab === 'signals' && (
-          <div className="flex border-b border-white/[0.04] mb-5">
-            {[
-              { id: 'live', label: 'Stage 1 Signals' },
-              { id: 'errors', label: 'W1 Errors' },
-              { id: 'rejected', label: 'Rejected Signals' },
-            ].map(sub => (
-              <button
-                key={sub.id}
-                onClick={() => setSignalSub(sub.id as SignalSubTab)}
-                className={clsx(
-                  'px-4 py-2 text-xs font-semibold border-b-2 -mb-[2px] transition-colors cursor-pointer',
-                  signalSub === sub.id
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-300'
-                )}
-              >
-                {sub.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Sub-Tab Navigation for Queue – "Recently Deleted" is first */}
+        {/* Sub-Tab Navigation for Errors */}
         {activeTab === 'queue' && (
-          <div className="flex border-b border-white/[0.04] mb-5">
-            {[
+          <div className="flex border-b border-white/[0.04] mb-5 overflow-x-auto overflow-y-hidden hide-scrollbar">
+            {([
               { id: 'recentlyDeleted', label: `Recently Deleted${deletedEntries.length > 0 ? ` (${deletedEntries.length})` : ''}` },
-              { id: 'queue', label: 'Stage 3 Queue' },
-              { id: 'w2Errors', label: 'W2 Errors' },
-            ].map(sub => (
+              ...(advanced ? [
+                { id: 'w1Errors', label: 'W1 Errors' },
+                { id: 'w2Errors', label: 'W2 Errors' },
+                { id: 'rejectedSignals', label: 'Rejected Signals' },
+                { id: 'approvedBriefs', label: 'Approved Briefs' },
+              ] : [])
+            ] as const).map(sub => (
               <button
                 key={sub.id}
                 onClick={() => setQueueSub(sub.id as QueueSubTab)}
