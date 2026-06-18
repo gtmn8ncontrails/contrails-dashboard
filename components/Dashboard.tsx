@@ -495,6 +495,9 @@ const CardGrid = ({
          }
          
          if (a.score !== b.score) return b.score - a.score;
+         const w = (u: string) => ({ high: 3, medium: 2, med: 2, low: 1 }[(u || '').toLowerCase()] || 0);
+         const urgencyDiff = w(b.urgency) - w(a.urgency);
+         if (urgencyDiff !== 0) return urgencyDiff;
          return b.idx - a.idx;
       } else {
          if (a.score !== b.score) return b.score - a.score;
@@ -565,8 +568,8 @@ const CardGrid = ({
       {/* Sort pills */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {[
-          { value: 'score', label: 'Sort: Top Score' },
-          { value: 'recent', label: 'Sort: Most Recent' },
+          { value: 'score', label: 'Top Score' },
+          { value: 'recent', label: 'Most Recent' },
         ].map(({ value, label }) => {
           const isActive = sortFilter === value;
           return (
