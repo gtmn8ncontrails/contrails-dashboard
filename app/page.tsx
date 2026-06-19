@@ -24,7 +24,7 @@ export default async function Home() {
     getSheetData('Stage 3 Output !A:AZ')
   ]);
 
-  const deleted = getDeletedEntries();
+  const deleted = await getDeletedEntries();
   const deletedKeys = new Set(deleted.map(d => getRowKey(d.row)));
 
   const filterDeleted = (data: Record<string, string>[]) => {
