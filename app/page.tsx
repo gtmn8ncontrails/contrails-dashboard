@@ -1,7 +1,8 @@
 import Dashboard from '@/components/Dashboard';
 import { getSheetData } from '@/lib/googleSheets';
+import { getDeletedEntries, getRowKey } from '@/lib/deletedStore';
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   // Fetch data concurrently for all main tabs
@@ -23,17 +24,26 @@ export default async function Home() {
     getSheetData('Stage 3 Output !A:AZ')
   ]);
 
+  const deleted = getDeletedEntries();
+  const deletedKeys = new Set(deleted.map(d => getRowKey(d.row)));
+
+  const filterDeleted = (data: Record<string, string>[]) => {
+    return (data || []).filter(row => !deletedKeys.has(getRowKey(row)));
+  };
+
   return (
     <Dashboard 
       initialData={{
-        stage1: stage1Data,
-        errors: errorsData,
-        w2Errors: w2ErrorsData,
-        approvedBriefs: approvedBriefsData,
-        stage3Queue: stage3QueueData,
-        rejectedSignals: rejectedSignalsData,
-        stage3Output: stage3OutputData
+        stage1: filterDeleted(stage1Data),
+        errors: filterDeleted(errorsData),
+        w2Errors: filterDeleted(w2ErrorsData),
+        approvedBriefs: filterDeleted(approvedBriefsData),
+        stage3Queue: filterDeleted(stage3QueueData),
+        rejectedSignals: filterDeleted(rejectedSignalsData),
+        stage3Output: filterDeleted(stage3OutputData)
       }}
+      initialDeleted={deleted}
     />
   );
 }
+

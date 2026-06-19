@@ -670,7 +670,7 @@ const CardGrid = ({
 };
 
 // ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
-export default function Dashboard({ initialData }: { initialData: any }) {
+export default function Dashboard({ initialData, initialDeleted }: { initialData: any; initialDeleted?: DeletedEntry[] }) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
   const [queueSub, setQueueSub] = useState<QueueSubTab>('recentlyDeleted');
@@ -686,7 +686,7 @@ export default function Dashboard({ initialData }: { initialData: any }) {
   const [localRejectedSignals, setLocalRejectedSignals] = useState<Record<string, string>[]>([]);
   const [localErrors, setLocalErrors] = useState<Record<string, string>[]>([]);
   const [localW2Errors, setLocalW2Errors] = useState<Record<string, string>[]>([]);
-  const [deletedEntries, setDeletedEntries] = useState<DeletedEntry[]>([]);
+  const [deletedEntries, setDeletedEntries] = useState<DeletedEntry[]>(initialDeleted || []);
 
   // Reset queue sub-tab to recently deleted if advanced is toggled off
   useEffect(() => {
@@ -703,7 +703,10 @@ export default function Dashboard({ initialData }: { initialData: any }) {
     setLocalRejectedSignals(initialData?.rejectedSignals || []);
     setLocalErrors(initialData?.errors || []);
     setLocalW2Errors(initialData?.w2Errors || []);
-  }, [initialData]);
+    if (initialDeleted) {
+      setDeletedEntries(initialDeleted);
+    }
+  }, [initialData, initialDeleted]);
 
   const relevanceMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -729,7 +732,15 @@ export default function Dashboard({ initialData }: { initialData: any }) {
     setSource: React.Dispatch<React.SetStateAction<Record<string, string>[]>>
   ) => {
     setSource(prev => prev.filter(r => r !== row));
-    setDeletedEntries(prev => [{ row, sourceKey, deletedAt: Date.now() }, ...prev]);
+    const newEntry = { row, sourceKey, deletedAt: Date.now() };
+    setDeletedEntries(prev => [newEntry, ...prev]);
+
+    // Send action to API to persist the deletion
+    fetch('/api/deleted', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', entry: newEntry }),
+    }).catch(err => console.error('Error saving deletion:', err));
   };
 
   // Restore from recently deleted back to its source list
@@ -745,6 +756,13 @@ export default function Dashboard({ initialData }: { initialData: any }) {
       w2Errors: setLocalW2Errors,
     };
     setterMap[entry.sourceKey](prev => [entry.row, ...prev]);
+
+    // Send action to API to persist the restoration
+    fetch('/api/deleted', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'restore', entry }),
+    }).catch(err => console.error('Error restoring entry:', err));
   };
 
   const triggerWorkflow = async (stage: number) => {
