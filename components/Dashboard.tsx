@@ -821,6 +821,8 @@ export default function Dashboard({
   const [runningStage, setRunningStage] = useState<number | null>(null);
   const [advanced, setAdvanced] = useState(false);
   const [selectedDeleted, setSelectedDeleted] = useState<DeletedEntry | null>(null);
+  const [analyzeUrl, setAnalyzeUrl] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Local mutable data state – initialized from server data, updated on delete/restore
   const [localStage1, setLocalStage1] = useState<Record<string, string>[]>([]);
@@ -966,6 +968,32 @@ export default function Dashboard({
     }
   };
 
+  const handleAnalyzeUrl = async () => {
+    if (!analyzeUrl.trim()) {
+      alert('Please enter a valid URL.');
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch('/api/workflows/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: 'analyze', url: analyzeUrl.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('URL analysis workflow triggered successfully!');
+        setAnalyzeUrl('');
+      } else {
+        alert(`Failed to trigger URL analysis: ${data.error || 'Unknown error'}`);
+      }
+    } catch {
+      alert('Error triggering URL analysis');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const navItems = [
     { id: 'overview',    label: 'Overview',     icon: LayoutDashboard },
     { id: 'finalAssets', label: 'Final Assets', icon: FileCheck },
@@ -1101,33 +1129,79 @@ export default function Dashboard({
         )}
 
         {activeTab === 'run' && (
-          <div className="flex items-center justify-center min-h-[60vh] pb-20 animate-fade-in">
-            <div className="w-full max-w-md border border-white/[0.06] bg-gradient-to-br from-[#0c0d1e]/80 to-[#111230]/60 p-8 rounded-3xl shadow-[0_8px_40px_rgba(99,102,241,0.08)] backdrop-blur-sm">
-              {/* Icon */}
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/15 border border-indigo-500/25 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
-                <Play className="w-6 h-6 text-indigo-400" />
+          <div className="flex items-center justify-center min-h-[60vh] pb-20 animate-fade-in w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+              
+              {/* Left Card: Full Pipeline Execution */}
+              <div className="border border-white/[0.06] bg-gradient-to-br from-[#0c0d1e]/80 to-[#111230]/60 p-8 rounded-3xl shadow-[0_8px_40px_rgba(99,102,241,0.08)] backdrop-blur-sm flex flex-col justify-between">
+                <div>
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/15 border border-indigo-500/25 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
+                    <Play className="w-6 h-6 text-indigo-400" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white mb-2 tracking-tight">Execute Pipeline</h2>
+                  <p className="text-sm text-slate-400 leading-relaxed mb-8">
+                    Scrape the latest signals, research papers, and competitor updates. Results will be processed and appear in your dashboard.
+                  </p>
+                </div>
+                <button
+                  onClick={() => triggerWorkflow(1)}
+                  disabled={runningStage !== null}
+                  className={clsx(
+                    'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer mt-auto',
+                    runningStage === 1
+                      ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]'
+                      : 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 shadow-[0_4px_20px_rgba(99,102,241,0.35)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.5)]'
+                  )}
+                >
+                  {runningStage === 1
+                    ? <span className="flex items-center gap-2"><span className="animate-spin">⍥</span> Running...</span>
+                    : <>Execute Workflow <ChevronRight className="w-4 h-4" /></>
+                  }
+                </button>
               </div>
 
-              <h2 className="text-lg font-bold text-white mb-2 tracking-tight">Execute Workflow</h2>
-              <p className="text-sm text-slate-400 leading-relaxed mb-8">
-                Scrape the latest signals, research papers, and competitor updates. Results will be processed and appear in your dashboard.
-              </p>
+              {/* Right Card: Single URL Analysis */}
+              <div className="border border-white/[0.06] bg-gradient-to-br from-[#0c0d1e]/80 to-[#111230]/60 p-8 rounded-3xl shadow-[0_8px_40px_rgba(99,102,241,0.08)] backdrop-blur-sm flex flex-col justify-between">
+                <div>
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/15 border border-indigo-500/25 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
+                    <Link className="w-6 h-6 text-indigo-400" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white mb-2 tracking-tight">Analyze Single URL</h2>
+                  <p className="text-sm text-slate-400 leading-relaxed mb-6">
+                    Enter a specific competitor site or signal URL to scrape and analyze directly into Stage 1 signals.
+                  </p>
+                  
+                  {/* URL Input */}
+                  <div className="relative mb-8">
+                    <input
+                      type="url"
+                      placeholder="https://competitor.com/blog-post"
+                      value={analyzeUrl}
+                      onChange={e => setAnalyzeUrl(e.target.value)}
+                      className="w-full bg-[#070711] border border-white/[0.08] rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </div>
 
-              <button
-                onClick={() => triggerWorkflow(1)}
-                disabled={runningStage !== null}
-                className={clsx(
-                  'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer',
-                  runningStage === 1
-                    ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]'
-                    : 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 shadow-[0_4px_20px_rgba(99,102,241,0.35)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.5)]'
-                )}
-              >
-                {runningStage === 1
-                  ? <span className="flex items-center gap-2"><span className="animate-spin">⍥</span> Running...</span>
-                  : <>Execute Workflow <ChevronRight className="w-4 h-4" /></>
-                }
-              </button>
+                <button
+                  onClick={handleAnalyzeUrl}
+                  disabled={isAnalyzing || !analyzeUrl.trim()}
+                  className={clsx(
+                    'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer mt-auto',
+                    isAnalyzing
+                      ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]'
+                      : !analyzeUrl.trim()
+                        ? 'bg-white/5 border border-white/[0.04] text-slate-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 shadow-[0_4px_20px_rgba(99,102,241,0.35)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.5)]'
+                  )}
+                >
+                  {isAnalyzing
+                    ? <span className="flex items-center gap-2"><span className="animate-spin">⍥</span> Scraping...</span>
+                    : <>Analyze <ChevronRight className="w-4 h-4" /></>
+                  }
+                </button>
+              </div>
+
             </div>
           </div>
         )}
