@@ -1,6 +1,8 @@
 import Dashboard from '@/components/Dashboard';
 import { getSheetData } from '@/lib/googleSheets';
-import { getDeletedEntries, getRowKey } from '@/lib/deletedStore';
+import { getDeletedEntries } from '@/lib/deletedStore';
+import { getRowKey } from '@/lib/utils';
+import { getCustomLinks } from '@/lib/customLinksStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +26,10 @@ export default async function Home() {
     getSheetData('Stage 3 Output !A:AZ')
   ]);
 
-  const deleted = await getDeletedEntries();
+  const [deleted, customLinks] = await Promise.all([
+    getDeletedEntries(),
+    getCustomLinks()
+  ]);
   const deletedKeys = new Set(deleted.map(d => getRowKey(d.row)));
 
   const filterDeleted = (data: Record<string, string>[]) => {
@@ -43,6 +48,7 @@ export default async function Home() {
         stage3Output: filterDeleted(stage3OutputData)
       }}
       initialDeleted={deleted}
+      initialCustomLinks={customLinks}
     />
   );
 }

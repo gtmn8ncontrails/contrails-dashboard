@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDeletedEntries, addDeletedEntry, removeDeletedEntry, getRowKey, DeletedEntry } from '@/lib/deletedStore';
+import { getDeletedEntries, addDeletedEntry, removeDeletedEntry, DeletedEntry } from '@/lib/deletedStore';
+import { getRowKey } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 

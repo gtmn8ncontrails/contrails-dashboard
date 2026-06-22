@@ -5,9 +5,10 @@ import {
   Database, AlertCircle, CheckCircle, XCircle, Play,
   ChevronRight, LayoutDashboard, Globe, Calendar,
   Search, X, Copy, Check, ExternalLink, Activity, FileText, ListTodo, RotateCw, FileCheck,
-  MoreHorizontal, Trash2, RefreshCcw
+  MoreHorizontal, Trash2, RefreshCcw, Link
 } from 'lucide-react';
 import clsx from 'clsx';
+import { getRowKey } from '@/lib/utils';
 
 type TabType = 'overview' | 'finalAssets' | 'signals' | 'briefs' | 'queue' | 'run';
 type SignalSubTab = 'live' | 'errors' | 'rejected';
@@ -61,16 +62,17 @@ function formatDisplayDate(dateStr: string): string {
 }
 
 // ── THREE-DOT MENU ─────────────────────────────────────────────────────────────
+type MenuOption = {
+  label: string;
+  onClick: () => void;
+  icon: React.ElementType;
+  className: string;
+};
+
 const ThreeDotsMenu = ({
-  onAction,
-  actionLabel,
-  actionIcon: ActionIcon,
-  actionClass,
+  options,
 }: {
-  onAction: () => void;
-  actionLabel: string;
-  actionIcon: React.ElementType;
-  actionClass: string;
+  options: MenuOption[];
 }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -93,17 +95,23 @@ const ThreeDotsMenu = ({
         <MoreHorizontal className="w-3.5 h-3.5" />
       </button>
       {open && (
-        <div className="absolute right-0 top-9 z-50 min-w-[130px] bg-[#111226] border border-white/[0.1] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden py-1">
-          <button
-            onClick={() => { onAction(); setOpen(false); }}
-            className={clsx(
-              'w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold transition-all cursor-pointer',
-              actionClass
-            )}
-          >
-            <ActionIcon className="w-3.5 h-3.5 flex-shrink-0" />
-            {actionLabel}
-          </button>
+        <div className="absolute right-0 top-9 z-50 min-w-[150px] bg-[#111226] border border-white/[0.1] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden py-1">
+          {options.map((opt, idx) => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={idx}
+                onClick={() => { opt.onClick(); setOpen(false); }}
+                className={clsx(
+                  'w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold transition-all cursor-pointer hover:bg-white/[0.04]',
+                  opt.className
+                )}
+              >
+                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                {opt.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -256,6 +264,8 @@ const DetailModal = ({
   onDelete,
   onRestore,
   isDeleted,
+  customLinks,
+  onAddLink,
 }: {
   row: Record<string, string>;
   onClose: () => void;
@@ -264,9 +274,23 @@ const DetailModal = ({
   onDelete?: (row: Record<string, string>) => void;
   onRestore?: (row: Record<string, string>) => void;
   isDeleted?: boolean;
+  customLinks?: Record<string, string>;
+  onAddLink?: (row: Record<string, string>, link: string) => void;
 }) => {
   const f = getCardFields(row, relevanceMap);
   const [copied, setCopied] = useState(false);
+  const [isAddingLink, setIsAddingLink] = useState(false);
+  const [linkInput, setLinkInput] = useState('');
+
+  const entryKey = getRowKey(row);
+  const externalLink = customLinks?.[entryKey] || '';
+
+  const handleSaveLink = () => {
+    if (onAddLink) {
+      onAddLink(row, linkInput);
+    }
+    setIsAddingLink(false);
+  };
 
   const handleCopy = async () => {
     const text = Object.entries(row).map(([k, v]) => `${k}: ${v}`).join('\n');
@@ -312,6 +336,41 @@ const DetailModal = ({
   const whatsappMessage = getRowValue(['whatsapp message', 'whatsapp_message']);
   const linkedinDm = getRowValue(['linkedin dm', 'linkedin_dm']);
 
+  const menuOptions = [];
+  if (onAddLink && !isDeleted) {
+    menuOptions.push({
+      label: 'Add Link',
+      onClick: () => {
+        setLinkInput(externalLink);
+        setIsAddingLink(true);
+      },
+      icon: Link,
+      className: 'text-indigo-400 hover:text-indigo-300 hover:bg-white/[0.04]',
+    });
+  }
+  if (onDelete && !isDeleted) {
+    menuOptions.push({
+      label: 'Delete',
+      onClick: () => {
+        onDelete(row);
+        onClose();
+      },
+      icon: Trash2,
+      className: 'text-red-400 hover:bg-red-500/10',
+    });
+  }
+  if (onRestore && isDeleted) {
+    menuOptions.push({
+      label: 'Restore',
+      onClick: () => {
+        onRestore(row);
+        onClose();
+      },
+      icon: RefreshCcw,
+      className: 'text-emerald-400 hover:bg-emerald-500/10',
+    });
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
@@ -331,23 +390,8 @@ const DetailModal = ({
           ) : <span />}
 
           <div className="flex items-center gap-2">
-            {(onDelete || onRestore) && (
-              <ThreeDotsMenu
-                onAction={() => {
-                  if (isDeleted) {
-                    onRestore?.(row);
-                  } else {
-                    onDelete?.(row);
-                  }
-                  onClose();
-                }}
-                actionLabel={isDeleted ? 'Restore' : 'Delete'}
-                actionIcon={isDeleted ? RefreshCcw : Trash2}
-                actionClass={isDeleted
-                  ? 'text-emerald-400 hover:bg-emerald-500/10'
-                  : 'text-red-400 hover:bg-red-500/10'
-                }
-              />
+            {menuOptions.length > 0 && (
+              <ThreeDotsMenu options={menuOptions} />
             )}
             {f.url && (
               <a
@@ -370,6 +414,35 @@ const DetailModal = ({
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto drawer-scrollbar px-6 py-6 space-y-6">
+          {/* Add Link Input Field */}
+          {isAddingLink && (
+            <div className="bg-[#111226] border border-indigo-500/30 p-4 rounded-2xl space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-indigo-400">Add External Link</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="https://example.com"
+                  value={linkInput}
+                  onChange={e => setLinkInput(e.target.value)}
+                  className="flex-1 bg-[#070711] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveLink}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Done
+                </button>
+                <button
+                  onClick={() => setIsAddingLink(false)}
+                  className="px-3 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Title */}
           {f.title && <h2 className="text-lg font-bold text-white leading-snug">{f.title}</h2>}
 
@@ -399,6 +472,31 @@ const DetailModal = ({
                   className="absolute top-2.5 right-2.5 opacity-0 group-hover/guidance-box:opacity-100 transition-opacity"
                 />
                 <p className="text-sm text-slate-200 leading-relaxed font-medium pr-6 whitespace-pre-wrap">{f.personaGuidance}</p>
+              </div>
+            </div>
+          )}
+
+          {/* External Link */}
+          {externalLink && (
+            <div className="relative group/extlink">
+              <div className="flex justify-between items-center mb-2 select-none">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#6366f1]">EXTERNAL LINK</p>
+                <CopyButton
+                  text={externalLink}
+                  tooltip="Copy External Link"
+                  className="opacity-0 group-hover/extlink:opacity-100 transition-opacity"
+                />
+              </div>
+              <div className="relative border-l-4 border-indigo-500/60 bg-indigo-500/[0.03] px-4 py-3 rounded-r-xl group/extlink-box transition-all hover:bg-indigo-500/[0.05]">
+                <a
+                  href={externalLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 break-all"
+                >
+                  <span>{externalLink}</span>
+                  <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                </a>
               </div>
             </div>
           )}
@@ -475,6 +573,8 @@ const CardGrid = ({
   isDeletedView,
   onRestore,
   advanced,
+  customLinks,
+  onAddLink,
 }: {
   data: Record<string, string>[];
   relevanceMap?: Map<string, string>;
@@ -482,6 +582,8 @@ const CardGrid = ({
   isDeletedView?: boolean;
   onRestore?: (row: Record<string, string>) => void;
   advanced: boolean;
+  customLinks?: Record<string, string>;
+  onAddLink?: (row: Record<string, string>, link: string) => void;
 }) => {
   const [search, setSearch] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
@@ -675,6 +777,8 @@ const CardGrid = ({
           onDelete={onDelete}
           onRestore={onRestore}
           isDeleted={isDeletedView}
+          customLinks={customLinks}
+          onAddLink={onAddLink}
         />
       )}
     </div>
@@ -682,7 +786,15 @@ const CardGrid = ({
 };
 
 // ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
-export default function Dashboard({ initialData, initialDeleted }: { initialData: any; initialDeleted?: DeletedEntry[] }) {
+export default function Dashboard({
+  initialData,
+  initialDeleted,
+  initialCustomLinks,
+}: {
+  initialData: any;
+  initialDeleted?: DeletedEntry[];
+  initialCustomLinks?: Record<string, string>;
+}) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
   const [queueSub, setQueueSub] = useState<QueueSubTab>('recentlyDeleted');
@@ -699,6 +811,7 @@ export default function Dashboard({ initialData, initialDeleted }: { initialData
   const [localErrors, setLocalErrors] = useState<Record<string, string>[]>([]);
   const [localW2Errors, setLocalW2Errors] = useState<Record<string, string>[]>([]);
   const [deletedEntries, setDeletedEntries] = useState<DeletedEntry[]>(initialDeleted || []);
+  const [customLinks, setCustomLinks] = useState<Record<string, string>>(initialCustomLinks || {});
 
   // Reset queue sub-tab to recently deleted if advanced is toggled off
   useEffect(() => {
@@ -718,7 +831,10 @@ export default function Dashboard({ initialData, initialDeleted }: { initialData
     if (initialDeleted) {
       setDeletedEntries(initialDeleted);
     }
-  }, [initialData, initialDeleted]);
+    if (initialCustomLinks) {
+      setCustomLinks(initialCustomLinks);
+    }
+  }, [initialData, initialDeleted, initialCustomLinks]);
 
   const relevanceMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -753,6 +869,22 @@ export default function Dashboard({ initialData, initialDeleted }: { initialData
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'delete', entry: newEntry }),
     }).catch(err => console.error('Error saving deletion:', err));
+  };
+
+  // Save or update a custom external link for an entry
+  const handleAddLink = (row: Record<string, string>, link: string) => {
+    const key = getRowKey(row);
+    setCustomLinks(prev => ({
+      ...prev,
+      [key]: link
+    }));
+
+    // Persist link update to the Google Sheets Custom Links tab
+    fetch('/api/custom-links', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rowKey: key, link }),
+    }).catch(err => console.error('Error saving custom link:', err));
   };
 
   // Restore from recently deleted back to its source list
@@ -998,6 +1130,8 @@ export default function Dashboard({ initialData, initialDeleted }: { initialData
               relevanceMap={relevanceMap}
               onDelete={(row) => handleDelete(row, activeConfig.sourceKey, activeConfig.setter)}
               advanced={advanced}
+              customLinks={customLinks}
+              onAddLink={handleAddLink}
             />
           </div>
         )}
@@ -1010,6 +1144,8 @@ export default function Dashboard({ initialData, initialDeleted }: { initialData
             advanced={advanced}
             onRestore={() => handleRestore(selectedDeleted)}
             isDeleted={true}
+            customLinks={customLinks}
+            onAddLink={handleAddLink}
           />
         )}
 
