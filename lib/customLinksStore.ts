@@ -46,7 +46,7 @@ async function ensureSheetExists(sheets: any) {
   }
 }
 
-export async function getCustomLinks(): Promise<Record<string, string>> {
+export async function getCustomLinks(): Promise<Record<string, string[]>> {
   try {
     const auth = await getAuth();
     if (!auth) return {};
@@ -58,10 +58,21 @@ export async function getCustomLinks(): Promise<Record<string, string>> {
     });
     const rows = response.data.values;
     if (!rows || rows.length <= 1) return {};
-    const map: Record<string, string> = {};
+    const map: Record<string, string[]> = {};
     rows.slice(1).forEach(row => {
       if (row[0] && row[1]) {
-        map[row[0]] = row[1];
+        let links: string[] = [];
+        try {
+          const parsed = JSON.parse(row[1]);
+          if (Array.isArray(parsed)) {
+            links = parsed;
+          } else {
+            links = [row[1]];
+          }
+        } catch {
+          links = [row[1]];
+        }
+        map[row[0]] = links;
       }
     });
     return map;
@@ -71,7 +82,7 @@ export async function getCustomLinks(): Promise<Record<string, string>> {
   }
 }
 
-export async function saveCustomLink(rowKey: string, link: string): Promise<void> {
+export async function saveCustomLinks(rowKey: string, links: string[]): Promise<void> {
   try {
     const auth = await getAuth();
     if (!auth) return;
@@ -85,13 +96,15 @@ export async function saveCustomLink(rowKey: string, link: string): Promise<void
     const rows = response.data.values || [];
     const index = rows.findIndex(r => r[0] === rowKey);
 
+    const serializedLinks = JSON.stringify(links);
+
     if (index !== -1) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
         range: `Custom Links!B${index + 1}`,
         valueInputOption: 'RAW',
         requestBody: {
-          values: [[link]],
+          values: [[serializedLinks]],
         },
       });
     } else {
@@ -100,11 +113,11 @@ export async function saveCustomLink(rowKey: string, link: string): Promise<void
         range: 'Custom Links!A:B',
         valueInputOption: 'RAW',
         requestBody: {
-          values: [[rowKey, link]],
+          values: [[rowKey, serializedLinks]],
         },
       });
     }
   } catch (error) {
-    console.error('Error saving custom link:', error);
+    console.error('Error saving custom links:', error);
   }
 }

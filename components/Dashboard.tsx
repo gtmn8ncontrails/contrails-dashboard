@@ -266,6 +266,7 @@ const DetailModal = ({
   isDeleted,
   customLinks,
   onAddLink,
+  onDeleteLink,
 }: {
   row: Record<string, string>;
   onClose: () => void;
@@ -274,8 +275,9 @@ const DetailModal = ({
   onDelete?: (row: Record<string, string>) => void;
   onRestore?: (row: Record<string, string>) => void;
   isDeleted?: boolean;
-  customLinks?: Record<string, string>;
+  customLinks?: Record<string, string[]>;
   onAddLink?: (row: Record<string, string>, link: string) => void;
+  onDeleteLink?: (row: Record<string, string>, linkIndex: number) => void;
 }) => {
   const f = getCardFields(row, relevanceMap);
   const [copied, setCopied] = useState(false);
@@ -283,12 +285,13 @@ const DetailModal = ({
   const [linkInput, setLinkInput] = useState('');
 
   const entryKey = getRowKey(row);
-  const externalLink = customLinks?.[entryKey] || '';
+  const externalLinks: string[] = customLinks?.[entryKey] || [];
 
   const handleSaveLink = () => {
-    if (onAddLink) {
-      onAddLink(row, linkInput);
+    if (onAddLink && linkInput.trim()) {
+      onAddLink(row, linkInput.trim());
     }
+    setLinkInput('');
     setIsAddingLink(false);
   };
 
@@ -341,7 +344,7 @@ const DetailModal = ({
     menuOptions.push({
       label: 'Add Link',
       onClick: () => {
-        setLinkInput(externalLink);
+        setLinkInput('');
         setIsAddingLink(true);
       },
       icon: Link,
@@ -476,27 +479,41 @@ const DetailModal = ({
             </div>
           )}
 
-          {/* External Link */}
-          {externalLink && (
-            <div className="relative group/extlink">
+          {/* External Links */}
+          {externalLinks.length > 0 && (
+            <div className="relative">
               <div className="flex justify-between items-center mb-2 select-none">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#6366f1]">EXTERNAL LINK</p>
-                <CopyButton
-                  text={externalLink}
-                  tooltip="Copy External Link"
-                  className="opacity-0 group-hover/extlink:opacity-100 transition-opacity"
-                />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#6366f1]">EXTERNAL LINKS</p>
               </div>
-              <div className="relative border-l-4 border-indigo-500/60 bg-indigo-500/[0.03] px-4 py-3 rounded-r-xl group/extlink-box transition-all hover:bg-indigo-500/[0.05]">
-                <a
-                  href={externalLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 break-all"
-                >
-                  <span>{externalLink}</span>
-                  <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
-                </a>
+              <div className="space-y-2">
+                {externalLinks.map((link, idx) => (
+                  <div key={idx} className="relative border-l-4 border-indigo-500/60 bg-indigo-500/[0.03] px-4 py-3 rounded-r-xl group/extlink-item transition-all hover:bg-indigo-500/[0.05] flex items-center justify-between gap-2">
+                    <a
+                      href={link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 break-all flex-1 min-w-0"
+                    >
+                      <span className="truncate">{link}</span>
+                      <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                    </a>
+                    <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover/extlink-item:opacity-100 transition-opacity">
+                      <CopyButton
+                        text={link}
+                        tooltip="Copy Link"
+                      />
+                      {onDeleteLink && !isDeleted && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDeleteLink(row, idx); }}
+                          className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                          title="Delete Link"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -575,6 +592,7 @@ const CardGrid = ({
   advanced,
   customLinks,
   onAddLink,
+  onDeleteLink,
 }: {
   data: Record<string, string>[];
   relevanceMap?: Map<string, string>;
@@ -582,8 +600,9 @@ const CardGrid = ({
   isDeletedView?: boolean;
   onRestore?: (row: Record<string, string>) => void;
   advanced: boolean;
-  customLinks?: Record<string, string>;
+  customLinks?: Record<string, string[]>;
   onAddLink?: (row: Record<string, string>, link: string) => void;
+  onDeleteLink?: (row: Record<string, string>, linkIndex: number) => void;
 }) => {
   const [search, setSearch] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
@@ -779,6 +798,7 @@ const CardGrid = ({
           isDeleted={isDeletedView}
           customLinks={customLinks}
           onAddLink={onAddLink}
+          onDeleteLink={onDeleteLink}
         />
       )}
     </div>
@@ -793,7 +813,7 @@ export default function Dashboard({
 }: {
   initialData: any;
   initialDeleted?: DeletedEntry[];
-  initialCustomLinks?: Record<string, string>;
+  initialCustomLinks?: Record<string, string[]>;
 }) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
@@ -811,7 +831,7 @@ export default function Dashboard({
   const [localErrors, setLocalErrors] = useState<Record<string, string>[]>([]);
   const [localW2Errors, setLocalW2Errors] = useState<Record<string, string>[]>([]);
   const [deletedEntries, setDeletedEntries] = useState<DeletedEntry[]>(initialDeleted || []);
-  const [customLinks, setCustomLinks] = useState<Record<string, string>>(initialCustomLinks || {});
+  const [customLinks, setCustomLinks] = useState<Record<string, string[]>>(initialCustomLinks || {});
 
   // Reset queue sub-tab to recently deleted if advanced is toggled off
   useEffect(() => {
@@ -871,20 +891,36 @@ export default function Dashboard({
     }).catch(err => console.error('Error saving deletion:', err));
   };
 
-  // Save or update a custom external link for an entry
+  // Append a custom external link for an entry
   const handleAddLink = (row: Record<string, string>, link: string) => {
     const key = getRowKey(row);
-    setCustomLinks(prev => ({
-      ...prev,
-      [key]: link
-    }));
+    setCustomLinks(prev => {
+      const existing = prev[key] || [];
+      const updated = [...existing, link];
+      // Persist link update to the Google Sheets Custom Links tab
+      fetch('/api/custom-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowKey: key, links: updated }),
+      }).catch(err => console.error('Error saving custom link:', err));
+      return { ...prev, [key]: updated };
+    });
+  };
 
-    // Persist link update to the Google Sheets Custom Links tab
-    fetch('/api/custom-links', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowKey: key, link }),
-    }).catch(err => console.error('Error saving custom link:', err));
+  // Delete a specific external link by index
+  const handleDeleteLink = (row: Record<string, string>, linkIndex: number) => {
+    const key = getRowKey(row);
+    setCustomLinks(prev => {
+      const existing = prev[key] || [];
+      const updated = existing.filter((_, i) => i !== linkIndex);
+      // Persist link update to the Google Sheets Custom Links tab
+      fetch('/api/custom-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowKey: key, links: updated }),
+      }).catch(err => console.error('Error deleting custom link:', err));
+      return { ...prev, [key]: updated };
+    });
   };
 
   // Restore from recently deleted back to its source list
@@ -1132,6 +1168,7 @@ export default function Dashboard({
               advanced={advanced}
               customLinks={customLinks}
               onAddLink={handleAddLink}
+              onDeleteLink={handleDeleteLink}
             />
           </div>
         )}
@@ -1146,6 +1183,7 @@ export default function Dashboard({
             isDeleted={true}
             customLinks={customLinks}
             onAddLink={handleAddLink}
+            onDeleteLink={handleDeleteLink}
           />
         )}
 

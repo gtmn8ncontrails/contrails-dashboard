@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCustomLinks, saveCustomLink } from '@/lib/customLinksStore';
+import { getCustomLinks, saveCustomLinks } from '@/lib/customLinksStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,13 +14,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { rowKey, link } = await request.json() as { rowKey: string; link: string };
+    const { rowKey, links } = await request.json() as { rowKey: string; links: string[] };
 
-    if (!rowKey || link === undefined) {
+    if (!rowKey || !Array.isArray(links)) {
       return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 });
     }
 
-    await saveCustomLink(rowKey, link);
+    await saveCustomLinks(rowKey, links);
     const updatedLinks = await getCustomLinks();
     return NextResponse.json({ success: true, customLinks: updatedLinks });
   } catch (error: any) {
