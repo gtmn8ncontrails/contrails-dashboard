@@ -48,6 +48,18 @@ function getCardFields(row: Record<string, string>, relevanceMap?: Map<string, s
   };
 }
 
+function formatDisplayDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    return dateStr;
+  }
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 // ── THREE-DOT MENU ─────────────────────────────────────────────────────────────
 const ThreeDotsMenu = ({
   onAction,
@@ -170,7 +182,7 @@ const SignalCard = ({
             <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{f.region}</span>
           )}
           {f.date && (
-            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{f.date}</span>
+            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDisplayDate(f.date)}</span>
           )}
           {f.clusterTopic && (
             <span className="text-indigo-400/60 font-medium truncate max-w-[120px]">{f.clusterTopic}</span>
@@ -485,13 +497,13 @@ const CardGrid = ({
     
     return itemsWithMeta.sort((a, b) => {
       if (sortFilter === 'recent') {
-         const timeA = new Date(a.date).getTime();
-         const timeB = new Date(b.date).getTime();
+         const dateObjA = new Date(a.date);
+         const dateObjB = new Date(b.date);
+         const timeA = !isNaN(dateObjA.getTime()) ? new Date(dateObjA.getFullYear(), dateObjA.getMonth(), dateObjA.getDate()).getTime() : 0;
+         const timeB = !isNaN(dateObjB.getTime()) ? new Date(dateObjB.getFullYear(), dateObjB.getMonth(), dateObjB.getDate()).getTime() : 0;
          
-         if (!isNaN(timeA) && !isNaN(timeB)) {
-             if (timeA !== timeB) return timeB - timeA;
-         } else if (a.date !== b.date) {
-             return b.date.localeCompare(a.date);
+         if (timeA !== timeB) {
+             return timeB - timeA;
          }
          
          if (a.score !== b.score) return b.score - a.score;
