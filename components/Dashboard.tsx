@@ -607,7 +607,7 @@ const CardGrid = ({
   const [search, setSearch] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [sortFilter, setSortFilter] = useState<'score' | 'recent'>('score');
+  const [sortFilter, setSortFilter] = useState<'score' | 'recent' | 'added'>('score');
   const [selected, setSelected] = useState<Record<string, string> | null>(null);
 
   const sorted = useMemo(() => {
@@ -617,7 +617,19 @@ const CardGrid = ({
     });
     
     return itemsWithMeta.sort((a, b) => {
-      if (sortFilter === 'recent') {
+      if (sortFilter === 'added') {
+         const getAddedTime = (item: typeof a) => {
+           const timeStr = item.row.created_at || item.row.queued_at || item.row.approved_date || '';
+           const t = new Date(timeStr).getTime();
+           return isNaN(t) ? 0 : t;
+         };
+         const timeA = getAddedTime(a);
+         const timeB = getAddedTime(b);
+         if (timeA !== timeB && timeA > 0 && timeB > 0) {
+           return timeB - timeA;
+         }
+         return b.idx - a.idx;
+      } else if (sortFilter === 'recent') {
          const dateObjA = new Date(a.date);
          const dateObjB = new Date(b.date);
          const timeA = !isNaN(dateObjA.getTime()) ? new Date(dateObjA.getFullYear(), dateObjA.getMonth(), dateObjA.getDate()).getTime() : 0;
@@ -652,7 +664,8 @@ const CardGrid = ({
         if (typeFilter === 'regulatory') return typeStr.includes('reg') || typeStr.includes('compliance');
         if (typeFilter === 'cisa') return typeStr.includes('gov') || typeStr.includes('cisa') || typeStr.includes('site');
         if (typeFilter === 'research') return typeStr.includes('research') || typeStr.includes('paper');
-        if (typeFilter === 'events') return typeStr.includes('event') || typeStr.includes('news');
+        if (typeFilter === 'events') return typeStr.includes('event') || (typeStr.includes('news') && !typeStr.includes('industry'));
+        if (typeFilter === 'industry_news') return typeStr.includes('industry');
         return true;
       });
     }
@@ -671,12 +684,13 @@ const CardGrid = ({
   ];
 
   const typePills = [
-    { value: 'all',        label: 'All Types' },
-    { value: 'competitor', label: 'Competitor' },
-    { value: 'regulatory', label: 'Regulatory' },
-    { value: 'cisa',       label: 'CISA/Gov' },
-    { value: 'research',   label: 'Research' },
-    { value: 'events',     label: 'Events' },
+    { value: 'all',           label: 'All Types' },
+    { value: 'competitor',    label: 'Competitor' },
+    { value: 'regulatory',    label: 'Regulatory' },
+    { value: 'cisa',          label: 'CISA/Gov' },
+    { value: 'research',      label: 'Research' },
+    { value: 'events',        label: 'Events' },
+    { value: 'industry_news', label: 'Industry News' },
   ];
 
   return (
@@ -703,12 +717,13 @@ const CardGrid = ({
         {[
           { value: 'score', label: 'Top Score' },
           { value: 'recent', label: 'Most Recent' },
+          { value: 'added', label: 'Recently Added' },
         ].map(({ value, label }) => {
           const isActive = sortFilter === value;
           return (
             <button
               key={value}
-              onClick={() => setSortFilter(value as 'score' | 'recent')}
+              onClick={() => setSortFilter(value as 'score' | 'recent' | 'added')}
               className={clsx(
                 'px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer',
                 isActive
