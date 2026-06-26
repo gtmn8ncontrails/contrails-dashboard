@@ -17,6 +17,16 @@ export async function POST(request: Request) {
     } else if (stage === 'analyze') {
       workflowId = process.env.STAGE_1_ANALYZE_WEBHOOK_URL || '';
       payload = { url };
+    } else if (stage === 'competitor') {
+      workflowId = process.env.STAGE_1_COMPETITOR_WEBHOOK_URL || '';
+    } else if (stage === 'cisa') {
+      workflowId = process.env.STAGE_1_CISA_WEBHOOK_URL || '';
+    } else if (stage === 'research') {
+      workflowId = process.env.STAGE_1_RESEARCH_WEBHOOK_URL || '';
+    } else if (stage === 'events') {
+      workflowId = process.env.STAGE_1_EVENTS_WEBHOOK_URL || '';
+    } else if (stage === 'news') {
+      workflowId = process.env.STAGE_1_NEWS_WEBHOOK_URL || '';
     }
 
     if (!workflowId) {

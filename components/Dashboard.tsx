@@ -5,7 +5,7 @@ import {
   Database, AlertCircle, CheckCircle, XCircle, Play,
   ChevronRight, LayoutDashboard, Globe, Calendar,
   Search, X, Copy, Check, ExternalLink, Activity, FileText, ListTodo, RotateCw, FileCheck,
-  MoreHorizontal, Trash2, RefreshCcw, Link
+  MoreHorizontal, Trash2, RefreshCcw, Link, Building, Landmark, BookOpen, CalendarDays, Newspaper
 } from 'lucide-react';
 import clsx from 'clsx';
 import { getRowKey } from '@/lib/utils';
@@ -833,7 +833,7 @@ export default function Dashboard({
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
   const [queueSub, setQueueSub] = useState<QueueSubTab>('recentlyDeleted');
-  const [runningStage, setRunningStage] = useState<number | null>(null);
+  const [runningStage, setRunningStage] = useState<number | string | null>(null);
   const [advanced, setAdvanced] = useState(false);
   const [selectedDeleted, setSelectedDeleted] = useState<DeletedEntry | null>(null);
   const [analyzeUrl, setAnalyzeUrl] = useState('');
@@ -963,7 +963,7 @@ export default function Dashboard({
     }).catch(err => console.error('Error restoring entry:', err));
   };
 
-  const triggerWorkflow = async (stage: number) => {
+  const triggerWorkflow = async (stage: number | string) => {
     setRunningStage(stage);
     try {
       const res = await fetch('/api/workflows/trigger', {
@@ -973,12 +973,12 @@ export default function Dashboard({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(`Stage ${stage} workflow triggered successfully!`);
+        alert(`Workflow '${stage}' triggered successfully!`);
       } else {
-        alert(`Failed to trigger Stage ${stage}: ${data.error || 'Unknown error'}`);
+        alert(`Failed to trigger workflow '${stage}': ${data.error || 'Unknown error'}`);
       }
     } catch {
-      alert(`Error triggering stage ${stage}`);
+      alert(`Error triggering workflow '${stage}'`);
     } finally {
       setRunningStage(null);
     }
@@ -1160,32 +1160,60 @@ export default function Dashboard({
           <div className="flex items-center justify-center min-h-[60vh] pb-20 animate-fade-in w-full">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
               
-              {/* Left Card: Full Pipeline Execution */}
-              <div className="border border-white/[0.06] bg-gradient-to-br from-[#0c0d1e]/80 to-[#111230]/60 p-8 rounded-3xl shadow-[0_8px_40px_rgba(99,102,241,0.08)] backdrop-blur-sm flex flex-col justify-between">
-                <div>
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/15 border border-indigo-500/25 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
-                    <Play className="w-6 h-6 text-indigo-400" />
-                  </div>
-                  <h2 className="text-lg font-bold text-white mb-2 tracking-tight">Execute Pipeline</h2>
-                  <p className="text-sm text-slate-400 leading-relaxed mb-8">
-                    Scrape the latest signals, research papers, and competitor updates. Results will be processed and appear in your dashboard.
-                  </p>
-                </div>
-                <button
-                  onClick={() => triggerWorkflow(1)}
-                  disabled={runningStage !== null}
-                  className={clsx(
-                    'w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer mt-auto',
-                    runningStage === 1
-                      ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]'
-                      : 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 shadow-[0_4px_20px_rgba(99,102,241,0.35)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.5)]'
-                  )}
-                >
-                  {runningStage === 1
-                    ? <span className="flex items-center gap-2"><span className="animate-spin">⍥</span> Running...</span>
-                    : <>Execute Workflow <ChevronRight className="w-4 h-4" /></>
-                  }
-                </button>
+              {/* Left Column: Individual Scraper Triggers */}
+              <div className="flex flex-col gap-4">
+                {[
+                  { id: 'competitor', label: 'Competitors', desc: 'Scrape competitor updates & blog posts', icon: Building, color: 'indigo' },
+                  { id: 'cisa', label: 'CISA / Gov', desc: 'Fetch latest regulatory & compliance feeds', icon: Landmark, color: 'blue' },
+                  { id: 'research', label: 'Research Papers', desc: 'Pull latest academic & industry papers', icon: BookOpen, color: 'purple' },
+                  { id: 'events', label: 'Events & Webinars', desc: 'Discover upcoming industry events', icon: CalendarDays, color: 'pink' },
+                  { id: 'news', label: 'Google News', desc: 'Scrape broad news for specific keywords', icon: Newspaper, color: 'emerald' },
+                ].map((scraper) => {
+                  const Icon = scraper.icon;
+                  const isRunning = runningStage === scraper.id;
+                  const anyRunning = runningStage !== null;
+                  
+                  // Pick colors based on the `color` property
+                  const colorStyles = {
+                    indigo: 'from-indigo-500/20 to-indigo-500/10 border-indigo-500/25 text-indigo-400 bg-indigo-500 hover:to-indigo-600',
+                    blue: 'from-blue-500/20 to-blue-500/10 border-blue-500/25 text-blue-400 bg-blue-500 hover:to-blue-600',
+                    purple: 'from-purple-500/20 to-purple-500/10 border-purple-500/25 text-purple-400 bg-purple-500 hover:to-purple-600',
+                    pink: 'from-pink-500/20 to-pink-500/10 border-pink-500/25 text-pink-400 bg-pink-500 hover:to-pink-600',
+                    emerald: 'from-emerald-500/20 to-emerald-500/10 border-emerald-500/25 text-emerald-400 bg-emerald-500 hover:to-emerald-600',
+                  }[scraper.color] || 'from-indigo-500/20 to-indigo-500/10 border-indigo-500/25 text-indigo-400 bg-indigo-500 hover:to-indigo-600';
+
+                  const [bgGradient, iconText, btnBg, btnHover] = colorStyles.split(' ').map(c => c.startsWith('bg-') || c.startsWith('hover:to-') || c.startsWith('text-') || c.startsWith('from-') || c.startsWith('to-') || c.startsWith('border-') ? c : '');
+                  // For simplicity, we just use static classes for the button, dynamic for the icon block
+                  
+                  return (
+                    <div key={scraper.id} className="border border-white/[0.06] bg-gradient-to-br from-[#0c0d1e]/80 to-[#111230]/60 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.2)] backdrop-blur-sm flex items-center gap-4">
+                      <div className={clsx(`w-12 h-12 rounded-xl bg-gradient-to-br border flex items-center justify-center shrink-0 shadow-lg`, colorStyles.split(' ').slice(0,2).join(' '), colorStyles.split(' ')[2])}>
+                        <Icon className={clsx("w-5 h-5", colorStyles.split(' ')[3])} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-white mb-0.5 truncate">{scraper.label}</h3>
+                        <p className="text-[11px] text-slate-400 truncate">{scraper.desc}</p>
+                      </div>
+                      <button
+                        onClick={() => triggerWorkflow(scraper.id)}
+                        disabled={anyRunning}
+                        className={clsx(
+                          'px-4 py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-2 shrink-0 w-[110px]',
+                          isRunning
+                            ? 'bg-white/10 text-white/70 border border-white/20'
+                            : anyRunning
+                              ? 'bg-white/5 border border-white/[0.04] text-slate-500 cursor-not-allowed'
+                              : 'bg-white/10 text-white hover:bg-white/20 border border-white/10 hover:border-white/30 cursor-pointer shadow-sm'
+                        )}
+                      >
+                        {isRunning
+                          ? <span className="flex items-center gap-1.5"><span className="animate-spin">⍥</span> Run</span>
+                          : <>Execute <Play className="w-3 h-3" /></>
+                        }
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Right Card: Single URL Analysis */}
