@@ -664,8 +664,8 @@ const CardGrid = ({
         if (typeFilter === 'regulatory') return typeStr.includes('reg') || typeStr.includes('compliance');
         if (typeFilter === 'cisa') return typeStr.includes('gov') || typeStr.includes('cisa') || typeStr.includes('site');
         if (typeFilter === 'research') return typeStr.includes('research') || typeStr.includes('paper');
-        if (typeFilter === 'events') return typeStr.includes('event') || (typeStr.includes('news') && !typeStr.includes('industry'));
-        if (typeFilter === 'industry_news') return typeStr.includes('industry');
+        if (typeFilter === 'events') return typeStr.includes('event') && !typeStr.includes('news');
+        if (typeFilter === 'industry_news') return typeStr.includes('news');
         return true;
       });
     }
@@ -715,9 +715,9 @@ const CardGrid = ({
       {/* Sort pills */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {[
-          { value: 'score', label: 'Top Score' },
-          { value: 'recent', label: 'Most Recent' },
           { value: 'added', label: 'Recently Added' },
+          { value: 'recent', label: 'Most Recent' },
+          { value: 'score', label: 'Top Score' },
         ].map(({ value, label }) => {
           const isActive = sortFilter === value;
           return (
@@ -838,6 +838,7 @@ export default function Dashboard({
   const [selectedDeleted, setSelectedDeleted] = useState<DeletedEntry | null>(null);
   const [analyzeUrl, setAnalyzeUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Local mutable data state – initialized from server data, updated on delete/restore
   const [localStage1, setLocalStage1] = useState<Record<string, string>[]>([]);
@@ -1075,6 +1076,18 @@ export default function Dashboard({
               />
             </button>
           </div>
+
+          {/* Refresh button */}
+          <button
+            onClick={() => {
+              setIsRefreshing(true);
+              window.location.reload();
+            }}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/20 hover:bg-white/[0.08] transition-all cursor-pointer"
+            title="Refresh Dashboard"
+          >
+            <RotateCw className={clsx("w-3.5 h-3.5", isRefreshing && "animate-spin")} />
+          </button>
 
           <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
