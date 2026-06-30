@@ -830,7 +830,7 @@ export default function Dashboard({
   initialDeleted?: DeletedEntry[];
   initialCustomLinks?: Record<string, string[]>;
 }) {
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>('finalAssets');
   const [signalSub, setSignalSub] = useState<SignalSubTab>('live');
   const [queueSub, setQueueSub] = useState<QueueSubTab>('recentlyDeleted');
   const [runningStage, setRunningStage] = useState<number | string | null>(null);
@@ -1011,10 +1011,10 @@ export default function Dashboard({
   };
 
   const navItems = [
-    { id: 'overview',    label: 'Overview',     icon: LayoutDashboard },
     { id: 'finalAssets', label: 'Final Assets', icon: FileCheck },
-    { id: 'queue',       label: 'Errors',       icon: AlertCircle },
     { id: 'run',         label: 'Run',          icon: Play },
+    { id: 'queue',       label: 'Errors',       icon: AlertCircle },
+    { id: 'overview',    label: 'Overview',     icon: LayoutDashboard },
   ] as const;
 
   // Determine the active data and corresponding delete handler
