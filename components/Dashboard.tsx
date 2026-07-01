@@ -607,7 +607,7 @@ const CardGrid = ({
   const [search, setSearch] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [sortFilter, setSortFilter] = useState<'score' | 'recent' | 'added'>('score');
+  const [sortFilter, setSortFilter] = useState<'score' | 'recent' | 'added'>('added');
   const [selected, setSelected] = useState<Record<string, string> | null>(null);
 
   const sorted = useMemo(() => {
@@ -671,7 +671,11 @@ const CardGrid = ({
     }
     if (search.trim()) {
       const q = search.toLowerCase();
-      items = items.filter(r => Object.values(r).some(v => v?.toLowerCase().includes(q)));
+      items = items.filter(r => {
+        const title = (r.title || r.signal_title || '').toLowerCase();
+        const summary = (r.summary || r.tldr || r.description || '').toLowerCase();
+        return title.includes(q) || summary.includes(q);
+      });
     }
     return items;
   }, [sorted, urgencyFilter, typeFilter, search]);
