@@ -27,10 +27,10 @@ export default function LoginPage() {
         router.refresh();
       } else {
         setError('Incorrect password');
+        setLoading(false);
       }
     } catch (err) {
       setError('An error occurred');
-    } finally {
       setLoading(false);
     }
   };
@@ -61,7 +61,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter access password"
-                className="c-input pl-10"
+                className="c-input !pl-10"
                 autoFocus
               />
             </div>
