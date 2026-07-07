@@ -1054,7 +1054,7 @@ export default function Dashboard({
       <header className="flex justify-between items-center px-4 md:px-8 py-4 bg-[#070711] border-b border-white/[0.04] sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center bg-black border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-            <img src={logoImg.src} alt="GetM Logo" className="w-full h-full object-contain" />
+            <img src={logoImg.src} alt="GetM Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="font-bold text-2xl text-white tracking-tight leading-none">GetM</h1>
