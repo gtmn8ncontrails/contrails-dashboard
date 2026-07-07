@@ -1052,11 +1052,11 @@ export default function Dashboard({
       {/* Top Header */}
       <header className="flex justify-between items-center px-4 md:px-8 py-4 bg-[#070711] border-b border-white/[0.04] sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-lg shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-            C
+          <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center bg-black border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+            <img src="/logo.jpg" alt="GetM Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="font-bold text-sm text-white tracking-tight leading-none">Contrails AI</h1>
+            <h1 className="font-bold text-sm text-white tracking-tight leading-none">GetM</h1>
             <p className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase mt-1">GTM Signals</p>
           </div>
         </div>
@@ -1150,7 +1150,7 @@ export default function Dashboard({
             <div className="border border-white/[0.04] bg-[#0c0d1e]/40 p-6 rounded-2xl">
               <h2 className="text-base font-bold text-white mb-2">Welcome to GTM Command Center</h2>
               <p className="text-xs text-slate-400 leading-relaxed max-w-3xl">
-                Automated competitive and regulatory intelligence for Contrails.ai. The pipeline scrapes competitor sites, academic research, and regulatory feeds, scores each signal for relevance and urgency, and turns the highest-priority ones into ready-to-use GTM assets — briefs, cold emails, and social content — queued for review.
+                Automated competitive and regulatory intelligence for GetM. The pipeline scrapes competitor sites, academic research, and regulatory feeds, scores each signal for relevance and urgency, and turns the highest-priority ones into ready-to-use GTM assets — briefs, cold emails, and social content — queued for review.
               </p>
             </div>
           </div>

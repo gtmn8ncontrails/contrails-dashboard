@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Contrails AI — GTM Intelligence',
-  description: 'GTM Intelligence Pipeline Dashboard for Contrails AI — deepfake detection & fraud prevention insights.',
+  title: 'GetM — GTM Intelligence',
+  description: 'GTM Intelligence Pipeline Dashboard for GetM — deepfake detection & fraud prevention insights.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Contrails AI',
+    title: 'GetM',
   },
 };
 
