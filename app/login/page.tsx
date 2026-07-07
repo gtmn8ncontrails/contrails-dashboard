@@ -45,10 +45,10 @@ export default function LoginPage() {
 
       <div className="glass w-full max-w-md p-8 relative z-10 animate-slide-up">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl glass flex items-center justify-center mb-4 shadow-cyan">
-            <ShieldAlert className="w-8 h-8 text-c-cyan" />
+          <div className="w-16 h-16 rounded-2xl glass flex items-center justify-center mb-4 shadow-cyan overflow-hidden bg-black p-1">
+            <img src="/logo.jpg" alt="GetM Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Contrails AI</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">GetM</h1>
           <p className="text-c-muted text-sm text-center">GTM Intelligence Command Center</p>
         </div>
 
