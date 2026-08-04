@@ -27,6 +27,8 @@ export async function POST(request: Request) {
       workflowId = process.env.STAGE_1_EVENTS_WEBHOOK_URL || '';
     } else if (stage === 'news') {
       workflowId = process.env.STAGE_1_NEWS_WEBHOOK_URL || '';
+    } else if (stage === 'all') {
+      workflowId = process.env.STAGE_1_ALL_SOURCES_WEBHOOK_URL || '';
     }
 
     if (!workflowId) {
